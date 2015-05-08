@@ -319,12 +319,18 @@ definition coset_product (a b : A) : coset_type := ⟦a*b⟧
 lemma coset_product_well_defined : ∀ a1 a2 b1 b2, same_lcoset N a1 b1 → same_lcoset N a2 b2 → ⟦a1*a2⟧ = ⟦b1*b2⟧ :=
       take a1, take a2, take b1, take b2, assume P1, assume P2,
       quot.sound (nsubg_same_lcoset_product a1 a2 b1 b2 P1 P2)
-lemma coset_product_assoc (a b c : A) : ⟦a*b*c⟧ = ⟦a*(b*c)⟧ :=
-      mul.assoc a b c ▸ eq.refl ⟦a*b*c⟧
 definition coset_mul (aN bN : coset_type) : coset_type :=
   quot.lift_on₂ aN bN coset_product coset_product_well_defined
 
 local infixl `cx`:70 := coset_mul
+example (a b c : A) : ⟦a*b⟧ cx ⟦c⟧ = ⟦a*b*c⟧ := rfl
+
+lemma coset_product_assoc (a b c : A) : ⟦a⟧ cx ⟦b⟧ cx ⟦c⟧ = ⟦a⟧*(⟦b⟧*⟦c⟧) := calc
+      ⟦a⟧ cx ⟦b⟧ cx ⟦c⟧ = ⟦a*b⟧ cx ⟦c⟧ : rfl
+      ... = ⟦a*b*c⟧ : rfl
+      ... = ⟦a*(b*c)⟧ : {mul.assoc a b c}
+      ... = ⟦a⟧ cx ⟦b*c⟧ : rfl
+      ... = ⟦a⟧ cx (⟦b⟧ cx ⟦c⟧) : rfl
 lemma coset_mul.assoc (aN bN cN : coset_type) : aN cx bN cx cN = aN cx (bN cx cN) := sorry
 --      quot.ind (λ a, quot.ind (λ b, quot.ind (λ c, coset_product_assoc a b c) cN) bN) aN
       
