@@ -323,16 +323,14 @@ definition coset_mul (aN bN : coset_type) : coset_type :=
   quot.lift_on₂ aN bN coset_product coset_product_well_defined
 
 local infixl `cx`:70 := coset_mul
-example (a b c : A) : ⟦a*b⟧ cx ⟦c⟧ = ⟦a*b*c⟧ := rfl
+example (a b c : A) : ⟦a⟧ cx ⟦b*c⟧ = ⟦a*(b*c)⟧ := rfl
 
-lemma coset_product_assoc (a b c : A) : ⟦a⟧ cx ⟦b⟧ cx ⟦c⟧ = ⟦a⟧*(⟦b⟧*⟦c⟧) := calc
-      ⟦a⟧ cx ⟦b⟧ cx ⟦c⟧ = ⟦a*b⟧ cx ⟦c⟧ : rfl
-      ... = ⟦a*b*c⟧ : rfl
+lemma coset_product_assoc (a b c : A) : ⟦a⟧ cx ⟦b⟧ cx ⟦c⟧ = ⟦a⟧ cx (⟦b⟧ cx ⟦c⟧) := calc
+      ⟦a⟧ cx ⟦b⟧ cx ⟦c⟧ = ⟦a*b*c⟧ : rfl
       ... = ⟦a*(b*c)⟧ : {mul.assoc a b c}
       ... = ⟦a⟧ cx ⟦b*c⟧ : rfl
-      ... = ⟦a⟧ cx (⟦b⟧ cx ⟦c⟧) : rfl
-lemma coset_mul.assoc (aN bN cN : coset_type) : aN cx bN cx cN = aN cx (bN cx cN) := sorry
---      quot.ind (λ a, quot.ind (λ b, quot.ind (λ c, coset_product_assoc a b c) cN) bN) aN
+lemma coset_mul.assoc (aN bN cN : coset_type) : aN cx bN cx cN = aN cx (bN cx cN) :=
+      quot.ind (λ a, quot.ind (λ b, quot.ind (λ c, coset_product_assoc a b c) cN) bN) aN
       
 end normal_subg
 namespace group
