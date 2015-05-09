@@ -317,7 +317,7 @@ lemma nsubg_same_lcoset_product : ∀ a1 a2 b1 b2, (a1 ~ b1) → (a2 ~ b2) →  
   ... = (b1*b2) ∘> N : nsubg_normal
 
 example (a b : A) : (a⁻¹ ~ b⁻¹) = (a⁻¹ ∘> N = b⁻¹ ∘> N) := rfl
-lemma nsubg_same_lcoset_inv : ∀ a b, same_lcoset N a b → same_lcoset N a⁻¹ b⁻¹ :=
+lemma nsubg_same_lcoset_inv : ∀ a b, (a ~ b) → (a⁻¹ ~ b⁻¹) :=
   take a b, assume Psame, calc
   a⁻¹ ∘> N = a⁻¹*b*b⁻¹ ∘> N    : by rewrite mul_inv_cancel_right
   ... = a⁻¹*b ∘> b⁻¹ ∘> N      : by rewrite glcoset_compose
@@ -364,7 +364,7 @@ lemma coset_mul.mul_one (aN : coset_type) : aN cx coset_one = aN :=
       quot.ind coset_product_right_id aN
 lemma coset_mul.left_inv (aN : coset_type) : (coset_inv aN) cx aN = coset_one :=
       quot.ind coset_product_left_inv aN
-definition quotient_group : group coset_type :=
+definition mk_quotient_group : group coset_type :=
            group.mk coset_mul coset_mul.assoc coset_one  coset_mul.one_mul coset_mul.mul_one coset_inv coset_mul.left_inv
 
 end normal_subg
@@ -377,6 +377,10 @@ include s
 variable {N : set A}
 variable [is_nsubg : is_normal_subgroup N]
 include is_nsubg
+definition quotient_group [instance] : group coset_type := mk_quotient_group
+
+example (aN : coset_type) : aN * aN⁻¹ = 1 := mul.right_inv aN
+
 end
 end quotient
 end group
