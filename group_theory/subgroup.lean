@@ -371,6 +371,7 @@ end normal_subg
 namespace group
 namespace quotient
 section
+open quot
 variable {A : Type}
 variable [s : group A]
 include s
@@ -380,6 +381,7 @@ include is_nsubg
 definition quotient_group [instance] : group coset_type := mk_quotient_group
 
 example (aN : coset_type) : aN * aN⁻¹ = 1 := mul.right_inv aN
+definition natural (a : A) : coset_type := ⟦a⟧
 
 end
 end quotient
