@@ -349,7 +349,8 @@ lemma coset_product_left_id (a : A) : ⟦1⟧ cx ⟦a⟧ = ⟦a⟧ := calc
       ⟦1*a⟧ = ⟦a⟧ : {one_mul a}
 lemma coset_product_right_id (a : A) : ⟦a⟧ cx ⟦1⟧ = ⟦a⟧ := calc
       ⟦a*1⟧ = ⟦a⟧ : {mul_one a}
-
+lemma coset_product_left_inv (a : A) : ⟦a⁻¹⟧ cx ⟦a⟧ = ⟦1⟧ := calc
+      ⟦a⁻¹*a⟧ = ⟦1⟧ : {mul.left_inv a}
 lemma coset_mul.assoc (aN bN cN : coset_type) : aN cx bN cx cN = aN cx (bN cx cN) :=
       quot.ind (λ a, quot.ind (λ b, quot.ind (λ c, coset_product_assoc a b c) cN) bN) aN
 lemma coset_mul.one_mul (aN : coset_type) : coset_one cx aN = aN :=
