@@ -357,6 +357,11 @@ lemma coset_mul.one_mul (aN : coset_type) : coset_one cx aN = aN :=
       quot.ind coset_product_left_id aN
 lemma coset_mul.mul_one (aN : coset_type) : aN cx coset_one = aN :=
       quot.ind coset_product_right_id aN
+lemma coset_mul.left_inv (aN : coset_type) : (coset_inv aN) cx aN = coset_one :=
+      quot.ind coset_product_left_inv aN
+definition quotient_group : group coset_type :=
+           group.mk coset_mul coset_mul.assoc coset_one  coset_mul.one_mul coset_mul.mul_one coset_inv coset_mul.left_inv
+
 end normal_subg
 namespace group
 namespace quotient
