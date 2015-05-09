@@ -310,28 +310,41 @@ lemma nsubg_same_lcoset_product : ∀ a1 a2 b1 b2, same_lcoset N a1 b1 → same_
   ... = N <∘ b1 <∘ b2 : {nsubg_normal b1}
   ... = N <∘ (b1*b2) : grcoset_compose
   ... = (b1*b2) ∘> N : nsubg_normal
-
+lemma nsubg_same_lcoset_inv : ∀ a b, same_lcoset N a b → same_lcoset N a⁻¹ b⁻¹ := sorry
 definition nsubg_setoid [instance] : setoid A :=
   setoid.mk (same_lcoset N)
   (mk_equivalence (same_lcoset N) (subg_same_lcoset.refl) (subg_same_lcoset.symm) (subg_same_lcoset.trans))
 definition coset_type : Type := quot nsubg_setoid
+definition coset_inv_base (a : A) : coset_type := ⟦a⁻¹⟧
 definition coset_product (a b : A) : coset_type := ⟦a*b⟧
 lemma coset_product_well_defined : ∀ a1 a2 b1 b2, same_lcoset N a1 b1 → same_lcoset N a2 b2 → ⟦a1*a2⟧ = ⟦b1*b2⟧ :=
-      take a1, take a2, take b1, take b2, assume P1, assume P2,
+      take a1 a2 b1 b2, assume P1 P2,
       quot.sound (nsubg_same_lcoset_product a1 a2 b1 b2 P1 P2)
 definition coset_mul (aN bN : coset_type) : coset_type :=
   quot.lift_on₂ aN bN coset_product coset_product_well_defined
+lemma coset_inv_well_defined : ∀ a b, same_lcoset N a b → ⟦a⁻¹⟧ = ⟦b⁻¹⟧ :=
+      take a b, assume P, quot.sound (nsubg_same_lcoset_inv a b P)
+definition coset_inv (aN : coset_type) : coset_type :=
+           quot.lift_on aN coset_inv_base coset_inv_well_defined
+definition coset_one :  coset_type := ⟦1⟧
 
 local infixl `cx`:70 := coset_mul
 example (a b c : A) : ⟦a⟧ cx ⟦b*c⟧ = ⟦a*(b*c)⟧ := rfl
 
 lemma coset_product_assoc (a b c : A) : ⟦a⟧ cx ⟦b⟧ cx ⟦c⟧ = ⟦a⟧ cx (⟦b⟧ cx ⟦c⟧) := calc
-      ⟦a⟧ cx ⟦b⟧ cx ⟦c⟧ = ⟦a*b*c⟧ : rfl
-      ... = ⟦a*(b*c)⟧ : {mul.assoc a b c}
+      ⟦a*b*c⟧ = ⟦a*(b*c)⟧ : {mul.assoc a b c}
       ... = ⟦a⟧ cx ⟦b*c⟧ : rfl
+lemma coset_product_left_id (a : A) : ⟦1⟧ cx ⟦a⟧ = ⟦a⟧ := calc
+      ⟦1*a⟧ = ⟦a⟧ : {one_mul a}
+lemma coset_product_right_id (a : A) : ⟦a⟧ cx ⟦1⟧ = ⟦a⟧ := calc
+      ⟦a*1⟧ = ⟦a⟧ : {mul_one a}
+
 lemma coset_mul.assoc (aN bN cN : coset_type) : aN cx bN cx cN = aN cx (bN cx cN) :=
       quot.ind (λ a, quot.ind (λ b, quot.ind (λ c, coset_product_assoc a b c) cN) bN) aN
-      
+lemma coset_mul.one_mul (aN : coset_type) : coset_one cx aN = aN :=
+      quot.ind coset_product_left_id aN
+lemma coset_mul.mul_one (aN : coset_type) : aN cx coset_one = aN :=
+      quot.ind coset_product_right_id aN
 end normal_subg
 namespace group
 namespace quotient
