@@ -65,7 +65,6 @@ namespace group
     infixr `∘>`:55 := glcoset -- stronger than = (50), weaker than * (70)
     infixl `<∘`:55 := grcoset
     infixr `∘c`:55 := conj_by
-    infixl `~` := is_conjugate
   end ops
 end group
     
@@ -74,6 +73,9 @@ section
 variable {A : Type}
 variable [s : group A]
 include s
+
+-- too precious to make it wider scope. group.ops can now be openned without it.
+local infixl `~` := is_conjugate
 
 lemma conj_compose (f g a : A) : f ∘c g ∘c a = f*g ∘c a :=
       calc f ∘c g ∘c a = f * (g * a * g⁻¹) * f⁻¹ : rfl
@@ -297,8 +299,11 @@ include s
 variable {N : set A}
 variable [is_nsubg : is_normal_subgroup N]
 include is_nsubg
+
+local notation a `~` b := same_lcoset N a b -- note : does not bind as strong as →
+
 lemma nsubg_normal : same_left_right_coset N := @is_normal_subgroup.normal A s N is_nsubg
-lemma nsubg_same_lcoset_product : ∀ a1 a2 b1 b2, same_lcoset N a1 b1 → same_lcoset N a2 b2 → same_lcoset N (a1*a2) (b1*b2) :=
+lemma nsubg_same_lcoset_product : ∀ a1 a2 b1 b2, (a1 ~ b1) → (a2 ~ b2) →  ((a1*a2) ~ (b1*b2)) :=
   take a1, take a2, take b1, take b2,
   assume Psame1 : a1 ∘> N = b1 ∘> N,
   assume Psame2 : a2 ∘> N = b2 ∘> N, calc
@@ -311,7 +316,7 @@ lemma nsubg_same_lcoset_product : ∀ a1 a2 b1 b2, same_lcoset N a1 b1 → same_
   ... = N <∘ (b1*b2) : grcoset_compose
   ... = (b1*b2) ∘> N : nsubg_normal
 
-example (a b : A) : same_lcoset N a⁻¹ b⁻¹ = (a⁻¹ ∘> N = b⁻¹ ∘> N) := rfl
+example (a b : A) : (a⁻¹ ~ b⁻¹) = (a⁻¹ ∘> N = b⁻¹ ∘> N) := rfl
 lemma nsubg_same_lcoset_inv : ∀ a b, same_lcoset N a b → same_lcoset N a⁻¹ b⁻¹ :=
   take a b, assume Psame, calc
   a⁻¹ ∘> N = a⁻¹*b*b⁻¹ ∘> N    : by rewrite mul_inv_cancel_right
@@ -328,12 +333,12 @@ definition nsubg_setoid [instance] : setoid A :=
 definition coset_type : Type := quot nsubg_setoid
 definition coset_inv_base (a : A) : coset_type := ⟦a⁻¹⟧
 definition coset_product (a b : A) : coset_type := ⟦a*b⟧
-lemma coset_product_well_defined : ∀ a1 a2 b1 b2, same_lcoset N a1 b1 → same_lcoset N a2 b2 → ⟦a1*a2⟧ = ⟦b1*b2⟧ :=
+lemma coset_product_well_defined : ∀ a1 a2 b1 b2, (a1 ~ b1) → (a2 ~ b2) → ⟦a1*a2⟧ = ⟦b1*b2⟧ :=
       take a1 a2 b1 b2, assume P1 P2,
       quot.sound (nsubg_same_lcoset_product a1 a2 b1 b2 P1 P2)
 definition coset_mul (aN bN : coset_type) : coset_type :=
   quot.lift_on₂ aN bN coset_product coset_product_well_defined
-lemma coset_inv_well_defined : ∀ a b, same_lcoset N a b → ⟦a⁻¹⟧ = ⟦b⁻¹⟧ :=
+lemma coset_inv_well_defined : ∀ a b, (a ~ b) → ⟦a⁻¹⟧ = ⟦b⁻¹⟧ :=
       take a b, assume P, quot.sound (nsubg_same_lcoset_inv a b P)
 definition coset_inv (aN : coset_type) : coset_type :=
            quot.lift_on aN coset_inv_base coset_inv_well_defined
