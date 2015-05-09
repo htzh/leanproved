@@ -314,14 +314,14 @@ lemma nsubg_same_lcoset_product : ∀ a1 a2 b1 b2, same_lcoset N a1 b1 → same_
 example (a b : A) : same_lcoset N a⁻¹ b⁻¹ = (a⁻¹ ∘> N = b⁻¹ ∘> N) := rfl
 lemma nsubg_same_lcoset_inv : ∀ a b, same_lcoset N a b → same_lcoset N a⁻¹ b⁻¹ :=
   take a b, assume Psame, calc
-  a⁻¹ ∘> N = a⁻¹*b*b⁻¹ ∘> N : {eq.symm (mul_inv_cancel_right a⁻¹ b)}
-  ... = a⁻¹*b ∘> b⁻¹ ∘> N : glcoset_compose
-  ... = a⁻¹*b ∘> (N <∘ b⁻¹) : {nsubg_normal b⁻¹}
-  ... = (a⁻¹*b ∘> N) <∘ b⁻¹ : lcoset_rcoset_assoc
-  ... = (a⁻¹ ∘> b ∘> N) <∘ b⁻¹ : glcoset_compose
-  ... = (a⁻¹ ∘> a ∘> N) <∘ b⁻¹ : {Psame}
-  ... = N <∘ b⁻¹ : glcoset_inv
-  ... = b⁻¹ ∘> N : {eq.symm (nsubg_normal b⁻¹)}
+  a⁻¹ ∘> N = a⁻¹*b*b⁻¹ ∘> N    : by rewrite mul_inv_cancel_right
+  ... = a⁻¹*b ∘> b⁻¹ ∘> N      : by rewrite glcoset_compose
+  ... = a⁻¹*b ∘> (N <∘ b⁻¹)    : by rewrite nsubg_normal
+  ... = (a⁻¹*b ∘> N) <∘ b⁻¹    : by rewrite lcoset_rcoset_assoc
+  ... = (a⁻¹ ∘> b ∘> N) <∘ b⁻¹ : by rewrite glcoset_compose
+  ... = (a⁻¹ ∘> a ∘> N) <∘ b⁻¹ : by rewrite Psame
+  ... = N <∘ b⁻¹               : by rewrite glcoset_inv
+  ... = b⁻¹ ∘> N               : by rewrite nsubg_normal
 definition nsubg_setoid [instance] : setoid A :=
   setoid.mk (same_lcoset N)
   (mk_equivalence (same_lcoset N) (subg_same_lcoset.refl) (subg_same_lcoset.symm) (subg_same_lcoset.trans))
