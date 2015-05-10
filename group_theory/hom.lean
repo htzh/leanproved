@@ -52,6 +52,15 @@ theorem hom_map_mul_closed (Hom : is_hom f) (H : set A) : mul_closed_on H → mu
         ... = b1 * f a2 : {and.right Pa1}
         ... = b1 * b2 : {and.right Pa2},
         in_image Pa1a2 Pb1b2
+end
+section
+variables {A B : Type}
+variable [s1 : group A]
+variable [s2 : group B]
+include s1
+include s2
+variable f : A → B
+variable Hom : is_hom f
 
 variable {H : set A}
 variable [is_subgH : is_subgroup H]
