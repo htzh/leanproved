@@ -24,11 +24,8 @@ definition is_hom (f : A → B) := ∀ a b, f (a*b) = (f a)*(f b)
 definition is_iso (f : A → B) := injective f ∧ is_hom f
 variable f : A → B
 variable Hom : is_hom f
-definition ker : set A := λ a, (f a) = 1
+definition ker : set A := {a : A | f a = 1}
 
-check f
-check ker f
-lemma ker.has_one (Hom : is_hom f) : 1 ∈ ker f := sorry
 theorem hom_map_one : f 1 = 1 :=
         have P : f 1 = (f 1) * (f 1), from
         calc f 1 = f (1*1) : mul_one
@@ -52,6 +49,26 @@ theorem hom_map_mul_closed (Hom : is_hom f) (H : set A) : mul_closed_on H → mu
         ... = b1 * f a2 : {and.right Pa1}
         ... = b1 * b2 : {and.right Pa2},
         in_image Pa1a2 Pb1b2
+lemma ker.has_one : 1 ∈ ker f := hom_map_one f Hom
+lemma ker.has_inv (Hom : is_hom f) : subgroup.has_inv (ker f) :=
+      take a, assume Pa : f a = 1, calc
+      f a⁻¹ = (f a)⁻¹ : by rewrite (hom_map_inv f Hom)
+      ... = 1⁻¹ : by rewrite Pa
+      ... = 1 : by rewrite inv_one
+lemma ker.mul_closed (Hom : is_hom f) : mul_closed_on (ker f) :=
+      take x y, assume Pand : f x = 1 ∧ f y = 1, calc
+      f (x*y) = (f x) * (f y) : by rewrite Hom
+      ... = 1 : by rewrite [and.left Pand, and.right Pand, mul_one]
+lemma ker.normal (Hom : is_hom f) : same_left_right_coset (ker f) :=
+      take a, funext (assume x, begin
+      esimp [ker, set_of, glcoset, grcoset],
+      rewrite [*Hom, comm_mul_eq_one (f a⁻¹) (f x)]
+      end)
+
+definition ker_is_normal_subgroup : is_normal_subgroup (ker f) :=
+  is_normal_subgroup.mk (ker.has_one f Hom) (ker.mul_closed f Hom) (ker.has_inv f Hom)
+    (ker.normal f Hom)
+
 end
 section
 variables {A B : Type}

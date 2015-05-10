@@ -49,5 +49,11 @@ lemma comm_one (a : A) : a*1 = 1*a :=
   calc a*1 = a : mul_one
   ... = 1*a : one_mul
 
+lemma comm_mul_eq_one (a b : A) : a*b = 1 = (b*a = 1) :=
+  propext (iff.intro
+    (assume Pl : a*b = 1, assert Pinv : a⁻¹=b, from inv_eq_of_mul_eq_one Pl,
+       by rewrite [eq.symm Pinv, mul.left_inv])
+    (assume Pr : b*a = 1, assert Pinv : b⁻¹=a, from inv_eq_of_mul_eq_one Pr,
+       by rewrite [eq.symm Pinv, mul.left_inv]))
 end group
 end algebra
