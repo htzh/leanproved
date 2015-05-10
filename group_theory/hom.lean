@@ -27,7 +27,7 @@ variable Hom : is_hom f
 definition ker : set A := λ a, (f a) = 1
 
 check f
-check @ker
+check ker f
 lemma ker.has_one (Hom : is_hom f) : 1 ∈ ker f := sorry
 theorem hom_map_one : f 1 = 1 :=
         have P : f 1 = (f 1) * (f 1), from
