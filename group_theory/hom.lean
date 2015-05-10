@@ -20,15 +20,22 @@ variable [s1 : group A]
 variable [s2 : group B]
 include s1
 include s2
+definition is_hom (f : A → B) := ∀ a b, f (a*b) = (f a)*(f b)
+definition is_iso (f : A → B) := injective f ∧ is_hom f
 variable f : A → B
-definition is_hom := ∀ a b, f (a*b) = (f a)*(f b)
-definition ker (Hom : is_hom f) : (set A) := {a : A | f a = 1}
-theorem hom_map_one (Hom : is_hom f) : f 1 = 1 :=
+variable Hom : is_hom f
+definition ker : set A := λ a, (f a) = 1
+
+check f
+check @ker
+lemma ker.has_one (Hom : is_hom f) : 1 ∈ ker f := sorry
+theorem hom_map_one : f 1 = 1 :=
         have P : f 1 = (f 1) * (f 1), from
         calc f 1 = f (1*1) : mul_one
         ... = (f 1) * (f 1) : Hom,
         eq.symm (mul.right_inv (f 1) ▸ (mul_inv_eq_of_eq_mul P))
-theorem hom_map_inv (Hom : is_hom f) (a : A) : f a⁻¹ = (f a)⁻¹ :=
+check hom_map_one
+theorem hom_map_inv (a : A) : f a⁻¹ = (f a)⁻¹ :=
         assert P : f 1 = 1, from hom_map_one f Hom,
         assert P1 : f (a⁻¹ * a) = 1, from (eq.symm (mul.left_inv a)) ▸ P,
         assert P2 : (f a⁻¹) * (f a) = 1, from (Hom a⁻¹ a) ▸ P1,
