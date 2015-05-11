@@ -12,6 +12,7 @@ open algebra
 notation H1 ▸ H2 := eq.subst H1 H2
 open set
 open function
+open algebra.group.ops
 local attribute set [reducible]
 
 section
@@ -25,7 +26,6 @@ definition is_iso (f : A → B) := injective f ∧ is_hom f
 variable f : A → B
 variable Hom : is_hom f
 definition ker : set A := {a : A | f a = 1}
-
 theorem hom_map_one : f 1 = 1 :=
         have P : f 1 = (f 1) * (f 1), from
         calc f 1 = f (1*1) : mul_one
@@ -38,7 +38,7 @@ theorem hom_map_inv (a : A) : f a⁻¹ = (f a)⁻¹ :=
         assert P2 : (f a⁻¹) * (f a) = 1, from (Hom a⁻¹ a) ▸ P1,
         assert P3 : (f a⁻¹) * (f a) = (f a)⁻¹ * (f a), from eq.symm (mul.left_inv (f a)) ▸ P2,
         mul_right_cancel P3
-theorem hom_map_mul_closed (Hom : is_hom f) (H : set A) : mul_closed_on H → mul_closed_on (f '[H]) :=
+theorem hom_map_mul_closed (H : set A) : mul_closed_on H → mul_closed_on (f '[H]) :=
         assume Pclosed, assume b1, assume b2,
         assume Pimage : b1 ∈ f '[ H] ∧ b2 ∈ f '[ H],
         obtain a1 (Pa1 : a1 ∈ H ∧ f a1 = b1), from and.left Pimage,
@@ -50,6 +50,7 @@ theorem hom_map_mul_closed (Hom : is_hom f) (H : set A) : mul_closed_on H → mu
         ... = b1 * b2 : {and.right Pa2},
         in_image Pa1a2 Pb1b2
 lemma ker.has_one : 1 ∈ ker f := hom_map_one f Hom
+-- lean does not see Hom is used in the tactic rewrite so declare Hom explicitly
 lemma ker.has_inv (Hom : is_hom f) : subgroup.has_inv (ker f) :=
       take a, assume Pa : f a = 1, calc
       f a⁻¹ = (f a)⁻¹ : by rewrite (hom_map_inv f Hom)
@@ -64,7 +65,6 @@ lemma ker.normal (Hom : is_hom f) : same_left_right_coset (ker f) :=
       esimp [ker, set_of, glcoset, grcoset],
       rewrite [*Hom, comm_mul_eq_one (f a⁻¹) (f x)]
       end)
-
 definition ker_is_normal_subgroup : is_normal_subgroup (ker f) :=
   is_normal_subgroup.mk (ker.has_one f Hom) (ker.mul_closed f Hom) (ker.has_inv f Hom)
     (ker.normal f Hom)
@@ -94,4 +94,29 @@ theorem hom_map_subgroup (Hom : is_hom f) : is_subgroup (f '[H]) :=
         is_subgroup.mk Pone Pclosed Pinv
 
 end
+section hom_theorem
+check @ker_is_normal_subgroup
+variables {A B : Type}
+variable [s1 : group A]
+variable [s2 : group B]
+include s1
+include s2
+variable {f : A → B}
+variable {Hom : is_hom f}
+definition ker_nsubg [instance] : is_normal_subgroup (ker f) := ker_is_normal_subgroup f Hom
+definition quot_over_ker [instance] [Pker : is_normal_subgroup (ker f)] : group (@coset_type _ _ (ker f) _) := mk_quotient_group
+-- under the wrap the tower of concepts collapse to a simple condition
+example (a x : A) : (x ∈ a ∘> ker f) = (f (a⁻¹*x) = 1) := rfl
+lemma ker_coset_hom [Pker : is_normal_subgroup (ker f)] (a b : A): same_lcoset (ker f) a b → f a = f b :=
+      assume Psame,
+      assert Pin : f (b⁻¹*a) = 1, from subg_same_lcoset_in_lcoset a b Psame,
+      assert P : (f b)⁻¹ * (f a) = 1, from calc
+      (f b)⁻¹ * (f a) = (f b⁻¹) * (f a) :  (hom_map_inv f Hom)
+      ... = f (b⁻¹*a) : by rewrite Hom
+      ... = 1 : by rewrite Pin,
+      eq.symm (inv_inv (f b) ▸ inv_eq_of_mul_eq_one P)
+definition hom_ker_natural_map [Pker : is_normal_subgroup (ker f)] : (@coset_type _ _ (ker f) _) → B :=
+           have hom : is_hom f, from Hom, -- force Hom to be an implicit argument
+           quot.lift f ker_coset_hom
+end hom_theorem        
 end group_hom

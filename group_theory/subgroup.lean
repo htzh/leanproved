@@ -261,16 +261,17 @@ lemma subg_in_coset_refl (a : A) : a ∈ a ∘> H ∧ a ∈ H <∘ a :=
       assert PHinvaa : H (a⁻¹*a), from (eq.symm (mul.left_inv a)) ▸ PH1,
       assert PHainva : H (a*a⁻¹), from (eq.symm (mul.right_inv a)) ▸ PH1,
       and.intro PHinvaa PHainva
-lemma subg_lcoset_same (a b : A) : in_lcoset H a b = (a∘>H = b∘>H) :=
-      propext(iff.intro 
-      (assume Pa_in_b : H (b⁻¹*a),
+lemma subg_in_lcoset_same_lcoset (a b : A) : in_lcoset H a b → same_lcoset H a b :=
+      assume Pa_in_b : H (b⁻¹*a),
       have Pbinva : b⁻¹*a ∘> H = H, from subgroup_lcoset_id (b⁻¹*a) Pa_in_b,
       have Pb_binva : b ∘> b⁻¹*a ∘> H = b ∘> H, from Pbinva ▸ rfl,
       have Pbbinva : b*(b⁻¹*a)∘>H = b∘>H, from glcoset_compose b (b⁻¹*a) H ▸ Pb_binva,
-      mul_inv_cancel_left b a ▸ Pbbinva)
-      (assume Psame : a∘>H = b∘>H,
+      mul_inv_cancel_left b a ▸ Pbbinva
+lemma subg_same_lcoset_in_lcoset (a b : A) : same_lcoset H a b → in_lcoset H a b :=
+      assume Psame : a∘>H = b∘>H,
       assert Pa : a ∈ a∘>H, from and.left (subg_in_coset_refl a),
-      by exact (Psame ▸ Pa)))
+      by exact (Psame ▸ Pa)
+
 lemma subg_rcoset_same (a b : A) : in_rcoset H a b = (H<∘a = H<∘b) :=
       propext(iff.intro 
       (assume Pa_in_b : H (a*b⁻¹),
@@ -286,9 +287,9 @@ lemma subg_same_rcoset.refl (a : A) : same_rcoset H a a := rfl
 lemma subg_same_lcoset.symm (a b : A) : same_lcoset H a b → same_lcoset H b a := eq.symm
 lemma subg_same_rcoset.symm (a b : A) : same_rcoset H a b → same_rcoset H b a := eq.symm
 lemma subg_same_lcoset.trans (a b c : A) : same_lcoset H a b → same_lcoset H b c → same_lcoset H a c :=
-      by rewrite [*subg_lcoset_same]; exact eq.trans
+      eq.trans
 lemma subg_same_rcoset.trans (a b c : A) : same_rcoset H a b → same_rcoset H b c → same_rcoset H a c :=
-      by rewrite [*subg_rcoset_same]; exact eq.trans
+      eq.trans
 end subgroup
 
 section normal_subg
@@ -296,8 +297,7 @@ open quot
 variable {A : Type}
 variable [s : group A]
 include s
-variable {N : set A}
-variable [is_nsubg : is_normal_subgroup N]
+variables {N : set A} [is_nsubg : is_normal_subgroup N]
 include is_nsubg
 
 local notation a `~` b := same_lcoset N a b -- note : does not bind as strong as →
@@ -331,6 +331,8 @@ definition nsubg_setoid [instance] : setoid A :=
   setoid.mk (same_lcoset N)
   (mk_equivalence (same_lcoset N) (subg_same_lcoset.refl) (subg_same_lcoset.symm) (subg_same_lcoset.trans))
 definition coset_type : Type := quot nsubg_setoid
+check @nsubg_setoid
+check @coset_type
 definition coset_inv_base (a : A) : coset_type := ⟦a⁻¹⟧
 definition coset_product (a b : A) : coset_type := ⟦a*b⟧
 lemma coset_product_well_defined : ∀ a1 a2 b1 b2, (a1 ~ b1) → (a2 ~ b2) → ⟦a1*a2⟧ = ⟦b1*b2⟧ :=
