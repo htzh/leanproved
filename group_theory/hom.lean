@@ -13,6 +13,7 @@ notation H1 ▸ H2 := eq.subst H1 H2
 open set
 open function
 open algebra.group.ops
+open quot
 local attribute set [reducible]
 
 section
@@ -102,12 +103,12 @@ variable [s2 : group B]
 include s1
 include s2
 variable {f : A → B}
-variable {Hom : is_hom f}
+variable Hom : is_hom f
 definition ker_nsubg [instance] : is_normal_subgroup (ker f) := ker_is_normal_subgroup f Hom
-definition quot_over_ker [instance] [Pker : is_normal_subgroup (ker f)] : group (@coset_type _ _ (ker f) _) := mk_quotient_group
+definition quot_over_ker [instance] [Pker : is_normal_subgroup (ker f)] : group (coset_of (ker f)) := mk_quotient_group (ker f)
 -- under the wrap the tower of concepts collapse to a simple condition
 example (a x : A) : (x ∈ a ∘> ker f) = (f (a⁻¹*x) = 1) := rfl
-lemma ker_coset_hom [Pker : is_normal_subgroup (ker f)] (a b : A): same_lcoset (ker f) a b → f a = f b :=
+lemma ker_coset_same_val [Pker : is_normal_subgroup (ker f)] (a b : A): same_lcoset (ker f) a b → f a = f b :=
       assume Psame,
       assert Pin : f (b⁻¹*a) = 1, from subg_same_lcoset_in_lcoset a b Psame,
       assert P : (f b)⁻¹ * (f a) = 1, from calc
@@ -115,8 +116,36 @@ lemma ker_coset_hom [Pker : is_normal_subgroup (ker f)] (a b : A): same_lcoset (
       ... = f (b⁻¹*a) : by rewrite Hom
       ... = 1 : by rewrite Pin,
       eq.symm (inv_inv (f b) ▸ inv_eq_of_mul_eq_one P)
-definition hom_ker_natural_map [Pker : is_normal_subgroup (ker f)] : (@coset_type _ _ (ker f) _) → B :=
-           using Hom, -- force Hom to be an implicit argument
-           by exact quot.lift f ker_coset_hom
+definition ker_natural_map [Pker : is_normal_subgroup (ker f)] : (coset_of (ker f)) → B :=
+           quot.lift f (ker_coset_same_val Hom)
+
+example [Pker : is_normal_subgroup (ker f)] (a : A) : ker_natural_map Hom ⟦a⟧ = f a := rfl
+lemma ker_coset_hom [Pker : is_normal_subgroup (ker f)] (a b : A) : ker_natural_map Hom (⟦a⟧*⟦b⟧) = (ker_natural_map Hom ⟦a⟧) * (ker_natural_map Hom ⟦b⟧) := calc
+      ker_natural_map Hom (⟦a⟧*⟦b⟧) = ker_natural_map Hom ⟦a*b⟧ : rfl
+      ... = f (a*b) : rfl
+      ... = (f a) * (f b) : by rewrite Hom
+      ... = (ker_natural_map Hom ⟦a⟧) * (ker_natural_map Hom ⟦b⟧) : rfl
+
+lemma ker_map_is_hom [Pker : is_normal_subgroup (ker f)] : is_hom (ker_natural_map Hom) :=
+  take aK bK,
+      quot.ind (λ a, quot.ind (λ b, ker_coset_hom Hom a b) bK) aK
+
+check @subg_in_lcoset_same_lcoset
+lemma ker_coset_inj [Pker : is_normal_subgroup (ker f)] (a b : A) : (ker_natural_map Hom ⟦a⟧ = ker_natural_map Hom ⟦b⟧) → ⟦a⟧ = ⟦b⟧ :=
+      assume Pfeq : f a = f b,
+      assert Painb : a ∈ b ∘> ker f, from calc
+      f (b⁻¹*a) = (f b⁻¹) * (f a) : by rewrite Hom
+      ... = (f b)⁻¹ * (f a) : by rewrite (hom_map_inv f Hom)
+      ... = (f a)⁻¹ * (f a) : by rewrite Pfeq
+      ... = 1 : by rewrite (mul.left_inv (f a)),
+      quot.sound (@subg_in_lcoset_same_lcoset _ _ (ker f) _ a b Painb)
+
+lemma ker_map_is_inj [Pker : is_normal_subgroup (ker f)] : injective (ker_natural_map Hom) :=
+  take aK bK,
+      quot.ind (λ a, quot.ind (λ b, ker_coset_inj Hom a b) bK) aK
+-- variously known as the fundamental theorem of group homomorphism or the first isomorphism theorem
+theorem group_homomorphism_theorem [Pker : is_normal_subgroup (ker f)] : is_iso (ker_natural_map Hom) :=
+  and.intro (ker_map_is_inj Hom) (ker_map_is_hom Hom)
+
 end hom_theorem        
 end group_hom

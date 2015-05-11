@@ -306,10 +306,9 @@ local notation a `~` b := same_lcoset N a b -- note : does not bind as strong as
 lemma nsubg_normal : same_left_right_coset N := @is_normal_subgroup.normal A s N is_nsubg
 lemma nsubg_same_lcoset_product : ∀ a1 a2 b1 b2, (a1 ~ b1) → (a2 ~ b2) →  ((a1*a2) ~ (b1*b2)) :=
   take a1, take a2, take b1, take b2,
-  assert Pnormal : same_left_right_coset N, from nsubg_normal N,
-  assume Psame1 : same_lcoset N a1 b1, --a1 ∘> N = b1 ∘> N,
-  assume Psame2 : same_lcoset N a2 b2, --a2 ∘> N = b2 ∘> N,
-  assert Psame3 : same_lcoset N (a1*b1) (a2*b2), from calc
+  assume Psame1 : a1 ∘> N = b1 ∘> N,
+  assume Psame2 : a2 ∘> N = b2 ∘> N,
+  calc
   a1*a2 ∘> N = a1 ∘> a2 ∘> N : glcoset_compose
   ... = a1 ∘> b2 ∘> N :    by rewrite Psame2
   ... = a1 ∘> (N <∘ b2) :  by rewrite (nsubg_normal N)
@@ -317,9 +316,7 @@ lemma nsubg_same_lcoset_product : ∀ a1 a2 b1 b2, (a1 ~ b1) → (a2 ~ b2) →  
   ... = (b1 ∘> N) <∘ b2 :  by rewrite Psame1
   ... = N <∘ b1 <∘ b2 :    by rewrite (nsubg_normal N)
   ... = N <∘ (b1*b2) :     by rewrite grcoset_compose
-  ... = (b1*b2) ∘> N :     by rewrite (nsubg_normal N),
-  Psame3
-
+  ... = (b1*b2) ∘> N :     by rewrite (nsubg_normal N)
 check @nsubg_same_lcoset_product        
 example (a b : A) : (a⁻¹ ~ b⁻¹) = (a⁻¹ ∘> N = b⁻¹ ∘> N) := rfl
 lemma nsubg_same_lcoset_inv : ∀ a b, (a ~ b) → (a⁻¹ ~ b⁻¹) :=
