@@ -116,7 +116,7 @@ lemma ker_coset_hom [Pker : is_normal_subgroup (ker f)] (a b : A): same_lcoset (
       ... = 1 : by rewrite Pin,
       eq.symm (inv_inv (f b) ▸ inv_eq_of_mul_eq_one P)
 definition hom_ker_natural_map [Pker : is_normal_subgroup (ker f)] : (@coset_type _ _ (ker f) _) → B :=
-           have hom : is_hom f, from Hom, -- force Hom to be an implicit argument
-           quot.lift f ker_coset_hom
+           using Hom, -- force Hom to be an implicit argument
+           by exact quot.lift f ker_coset_hom
 end hom_theorem        
 end group_hom

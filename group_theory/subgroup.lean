@@ -208,8 +208,8 @@ definition subgroup.has_inv H := ∀ a, a ∈ H → a⁻¹ ∈ H
 -- two ways to define the same equivalence relatiohship for subgroups
 definition in_lcoset H a b := a ∈ b ∘> H
 definition in_rcoset H a b := a ∈ H <∘ b
-definition same_lcoset H a b := a ∘> H = b ∘> H
-definition same_rcoset H a b := H <∘ a = H <∘ b
+definition same_lcoset [reducible] H a b := a ∘> H = b ∘> H
+definition same_rcoset [reducible] H a b := H <∘ a = H <∘ b
 definition same_left_right_coset (N : set A) := ∀ x, x ∘> N = N <∘ x
 structure is_subgroup [class] (H : set A) : Type :=
   (has_one : H 1)
@@ -297,7 +297,8 @@ open quot
 variable {A : Type}
 variable [s : group A]
 include s
-variables {N : set A} [is_nsubg : is_normal_subgroup N]
+variable (N : set A)
+variable [is_nsubg : is_normal_subgroup N]
 include is_nsubg
 
 local notation a `~` b := same_lcoset N a b -- note : does not bind as strong as →
@@ -305,17 +306,21 @@ local notation a `~` b := same_lcoset N a b -- note : does not bind as strong as
 lemma nsubg_normal : same_left_right_coset N := @is_normal_subgroup.normal A s N is_nsubg
 lemma nsubg_same_lcoset_product : ∀ a1 a2 b1 b2, (a1 ~ b1) → (a2 ~ b2) →  ((a1*a2) ~ (b1*b2)) :=
   take a1, take a2, take b1, take b2,
-  assume Psame1 : a1 ∘> N = b1 ∘> N,
-  assume Psame2 : a2 ∘> N = b2 ∘> N, calc
+  assert Pnormal : same_left_right_coset N, from nsubg_normal N,
+  assume Psame1 : same_lcoset N a1 b1, --a1 ∘> N = b1 ∘> N,
+  assume Psame2 : same_lcoset N a2 b2, --a2 ∘> N = b2 ∘> N,
+  assert Psame3 : same_lcoset N (a1*b1) (a2*b2), from calc
   a1*a2 ∘> N = a1 ∘> a2 ∘> N : glcoset_compose
-  ... = a1 ∘> b2 ∘> N : {Psame2}
-  ... = a1 ∘> (N <∘ b2) : {nsubg_normal b2}
-  ... = (a1 ∘> N) <∘ b2 : lcoset_rcoset_assoc
-  ... = (b1 ∘> N) <∘ b2 : {Psame1}
-  ... = N <∘ b1 <∘ b2 : {nsubg_normal b1}
-  ... = N <∘ (b1*b2) : grcoset_compose
-  ... = (b1*b2) ∘> N : nsubg_normal
+  ... = a1 ∘> b2 ∘> N :    by rewrite Psame2
+  ... = a1 ∘> (N <∘ b2) :  by rewrite (nsubg_normal N)
+  ... = (a1 ∘> N) <∘ b2 :  by rewrite lcoset_rcoset_assoc
+  ... = (b1 ∘> N) <∘ b2 :  by rewrite Psame1
+  ... = N <∘ b1 <∘ b2 :    by rewrite (nsubg_normal N)
+  ... = N <∘ (b1*b2) :     by rewrite grcoset_compose
+  ... = (b1*b2) ∘> N :     by rewrite (nsubg_normal N),
+  Psame3
 
+check @nsubg_same_lcoset_product        
 example (a b : A) : (a⁻¹ ~ b⁻¹) = (a⁻¹ ∘> N = b⁻¹ ∘> N) := rfl
 lemma nsubg_same_lcoset_inv : ∀ a b, (a ~ b) → (a⁻¹ ~ b⁻¹) :=
   take a b, assume Psame, calc
@@ -330,23 +335,23 @@ lemma nsubg_same_lcoset_inv : ∀ a b, (a ~ b) → (a⁻¹ ~ b⁻¹) :=
 definition nsubg_setoid [instance] : setoid A :=
   setoid.mk (same_lcoset N)
   (mk_equivalence (same_lcoset N) (subg_same_lcoset.refl) (subg_same_lcoset.symm) (subg_same_lcoset.trans))
-definition coset_type : Type := quot nsubg_setoid
+definition coset_of : Type := quot (nsubg_setoid N)
 check @nsubg_setoid
-check @coset_type
-definition coset_inv_base (a : A) : coset_type := ⟦a⁻¹⟧
-definition coset_product (a b : A) : coset_type := ⟦a*b⟧
+check @coset_of
+definition coset_inv_base (a : A) : coset_of N := ⟦a⁻¹⟧
+definition coset_product (a b : A) : coset_of N := ⟦a*b⟧
 lemma coset_product_well_defined : ∀ a1 a2 b1 b2, (a1 ~ b1) → (a2 ~ b2) → ⟦a1*a2⟧ = ⟦b1*b2⟧ :=
       take a1 a2 b1 b2, assume P1 P2,
-      quot.sound (nsubg_same_lcoset_product a1 a2 b1 b2 P1 P2)
-definition coset_mul (aN bN : coset_type) : coset_type :=
-  quot.lift_on₂ aN bN coset_product coset_product_well_defined
+      quot.sound (nsubg_same_lcoset_product N a1 a2 b1 b2 P1 P2)
+definition coset_mul (aN bN : coset_of N) : coset_of N :=
+  quot.lift_on₂ aN bN (coset_product N) (coset_product_well_defined N)
 lemma coset_inv_well_defined : ∀ a b, (a ~ b) → ⟦a⁻¹⟧ = ⟦b⁻¹⟧ :=
-      take a b, assume P, quot.sound (nsubg_same_lcoset_inv a b P)
-definition coset_inv (aN : coset_type) : coset_type :=
-           quot.lift_on aN coset_inv_base coset_inv_well_defined
-definition coset_one :  coset_type := ⟦1⟧
+      take a b, assume P, quot.sound (nsubg_same_lcoset_inv N a b P)
+definition coset_inv (aN : coset_of N) : coset_of N :=
+           quot.lift_on aN (coset_inv_base N) (coset_inv_well_defined N)
+definition coset_one :  coset_of N := ⟦1⟧
 
-local infixl `cx`:70 := coset_mul
+local infixl `cx`:70 := coset_mul N
 example (a b c : A) : ⟦a⟧ cx ⟦b*c⟧ = ⟦a*(b*c)⟧ := rfl
 
 lemma coset_product_assoc (a b c : A) : ⟦a⟧ cx ⟦b⟧ cx ⟦c⟧ = ⟦a⟧ cx (⟦b⟧ cx ⟦c⟧) := calc
@@ -358,16 +363,16 @@ lemma coset_product_right_id (a : A) : ⟦a⟧ cx ⟦1⟧ = ⟦a⟧ := calc
       ⟦a*1⟧ = ⟦a⟧ : {mul_one a}
 lemma coset_product_left_inv (a : A) : ⟦a⁻¹⟧ cx ⟦a⟧ = ⟦1⟧ := calc
       ⟦a⁻¹*a⟧ = ⟦1⟧ : {mul.left_inv a}
-lemma coset_mul.assoc (aN bN cN : coset_type) : aN cx bN cx cN = aN cx (bN cx cN) :=
-      quot.ind (λ a, quot.ind (λ b, quot.ind (λ c, coset_product_assoc a b c) cN) bN) aN
-lemma coset_mul.one_mul (aN : coset_type) : coset_one cx aN = aN :=
-      quot.ind coset_product_left_id aN
-lemma coset_mul.mul_one (aN : coset_type) : aN cx coset_one = aN :=
-      quot.ind coset_product_right_id aN
-lemma coset_mul.left_inv (aN : coset_type) : (coset_inv aN) cx aN = coset_one :=
-      quot.ind coset_product_left_inv aN
-definition mk_quotient_group : group coset_type :=
-           group.mk coset_mul coset_mul.assoc coset_one  coset_mul.one_mul coset_mul.mul_one coset_inv coset_mul.left_inv
+lemma coset_mul.assoc (aN bN cN : coset_of N) : aN cx bN cx cN = aN cx (bN cx cN) :=
+      quot.ind (λ a, quot.ind (λ b, quot.ind (λ c, coset_product_assoc N a b c) cN) bN) aN
+lemma coset_mul.one_mul (aN : coset_of N) : coset_one N cx aN = aN :=
+      quot.ind (coset_product_left_id N) aN
+lemma coset_mul.mul_one (aN : coset_of N) : aN cx (coset_one N) = aN :=
+      quot.ind (coset_product_right_id N) aN
+lemma coset_mul.left_inv (aN : coset_of N) : (coset_inv N aN) cx aN = (coset_one N) :=
+      quot.ind (coset_product_left_inv N) aN
+definition mk_quotient_group : group (coset_of N):=
+           group.mk (coset_mul N) (coset_mul.assoc N) (coset_one N)  (coset_mul.one_mul N) (coset_mul.mul_one N) (coset_inv N) (coset_mul.left_inv N)
 
 end normal_subg
 namespace group
@@ -380,10 +385,10 @@ include s
 variable {N : set A}
 variable [is_nsubg : is_normal_subgroup N]
 include is_nsubg
-definition quotient_group [instance] : group coset_type := mk_quotient_group
+definition quotient_group [instance] : group (coset_of N) := mk_quotient_group N
 
-example (aN : coset_type) : aN * aN⁻¹ = 1 := mul.right_inv aN
-definition natural (a : A) : coset_type := ⟦a⟧
+example (aN : coset_of N) : aN * aN⁻¹ = 1 := mul.right_inv aN
+definition natural (a : A) : coset_of N := ⟦a⟧
 
 end
 end quotient
