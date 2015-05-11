@@ -143,8 +143,8 @@ lemma ker_coset_inj [Pker : is_normal_subgroup (ker f)] (a b : A) : (ker_natural
 lemma ker_map_is_inj [Pker : is_normal_subgroup (ker f)] : injective (ker_natural_map Hom) :=
   take aK bK,
       quot.ind (λ a, quot.ind (λ b, ker_coset_inj Hom a b) bK) aK
--- variously known as the fundamental theorem of group homomorphism or the first isomorphism theorem
-theorem group_homomorphism_theorem [Pker : is_normal_subgroup (ker f)] : is_iso (ker_natural_map Hom) :=
+-- a special case of the fundamental homomorphism theorem or the first isomorphism theorem
+theorem first_isomorphism_theorem [Pker : is_normal_subgroup (ker f)] : is_iso (ker_natural_map Hom) :=
   and.intro (ker_map_is_inj Hom) (ker_map_is_hom Hom)
 
 end hom_theorem        
