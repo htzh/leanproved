@@ -23,6 +23,8 @@ variable [s2 : group B]
 include s1
 include s2
 definition is_hom (f : A → B) := ∀ a b, f (a*b) = (f a)*(f b)
+structure hom_class [class] (f : A → B) : Type :=
+  (hom : is_hom f)
 definition is_iso (f : A → B) := injective f ∧ is_hom f
 variable f : A → B
 variable Hom : is_hom f
@@ -69,7 +71,6 @@ lemma ker.normal (Hom : is_hom f) : same_left_right_coset (ker f) :=
 definition ker_is_normal_subgroup : is_normal_subgroup (ker f) :=
   is_normal_subgroup.mk (ker.has_one f Hom) (ker.mul_closed f Hom) (ker.has_inv f Hom)
     (ker.normal f Hom)
-
 end
 section
 variables {A B : Type}
@@ -95,6 +96,7 @@ theorem hom_map_subgroup (Hom : is_hom f) : is_subgroup (f '[H]) :=
         is_subgroup.mk Pone Pclosed Pinv
 
 end
+
 section hom_theorem
 check @ker_is_normal_subgroup
 variables {A B : Type}
@@ -103,10 +105,12 @@ variable [s2 : group B]
 include s1
 include s2
 variable {f : A → B}
-variable Hom : is_hom f
-definition ker_nsubg [instance] : is_normal_subgroup (ker f) := ker_is_normal_subgroup f Hom
-variable [ker_is_nsubg : is_normal_subgroup (ker f)]
-include ker_is_nsubg
+variable [hom : hom_class f]
+include hom
+private lemma Hom : is_hom f := @hom_class.hom _ _ _ _ f hom
+definition ker_nsubg [instance] : is_normal_subgroup (ker f) :=
+           is_normal_subgroup.mk (ker.has_one f Hom) (ker.mul_closed f Hom)
+           (ker.has_inv f Hom) (ker.normal f Hom)
 definition quot_over_ker [instance] : group (coset_of (ker f)) := mk_quotient_group (ker f)
 -- under the wrap the tower of concepts collapse to a simple condition
 example (a x : A) : (x ∈ a ∘> ker f) = (f (a⁻¹*x) = 1) := rfl
@@ -119,21 +123,21 @@ lemma ker_coset_same_val (a b : A): same_lcoset (ker f) a b → f a = f b :=
       ... = 1 : by rewrite Pin,
       eq.symm (inv_inv (f b) ▸ inv_eq_of_mul_eq_one P)
 definition ker_natural_map : (coset_of (ker f)) → B :=
-           quot.lift f (ker_coset_same_val Hom)
+           quot.lift f ker_coset_same_val
 
-example (a : A) : ker_natural_map Hom ⟦a⟧ = f a := rfl
-lemma ker_coset_hom (a b : A) : ker_natural_map Hom (⟦a⟧*⟦b⟧) = (ker_natural_map Hom ⟦a⟧) * (ker_natural_map Hom ⟦b⟧) := calc
-      ker_natural_map Hom (⟦a⟧*⟦b⟧) = ker_natural_map Hom ⟦a*b⟧ : rfl
+example (a : A) : ker_natural_map ⟦a⟧ = f a := rfl
+lemma ker_coset_hom (a b : A) : ker_natural_map (⟦a⟧*⟦b⟧) = (ker_natural_map ⟦a⟧) * (ker_natural_map ⟦b⟧) := calc
+      ker_natural_map (⟦a⟧*⟦b⟧) = ker_natural_map ⟦a*b⟧ : rfl
       ... = f (a*b) : rfl
       ... = (f a) * (f b) : by rewrite Hom
-      ... = (ker_natural_map Hom ⟦a⟧) * (ker_natural_map Hom ⟦b⟧) : rfl
+      ... = (ker_natural_map ⟦a⟧) * (ker_natural_map ⟦b⟧) : rfl
 
-lemma ker_map_is_hom : is_hom (ker_natural_map Hom) :=
+lemma ker_map_is_hom : is_hom (ker_natural_map : coset_of (ker f) → B) :=
   take aK bK,
-      quot.ind (λ a, quot.ind (λ b, ker_coset_hom Hom a b) bK) aK
+      quot.ind (λ a, quot.ind (λ b, ker_coset_hom a b) bK) aK
 
 check @subg_in_lcoset_same_lcoset
-lemma ker_coset_inj (a b : A) : (ker_natural_map Hom ⟦a⟧ = ker_natural_map Hom ⟦b⟧) → ⟦a⟧ = ⟦b⟧ :=
+lemma ker_coset_inj (a b : A) : (ker_natural_map ⟦a⟧ = ker_natural_map ⟦b⟧) → ⟦a⟧ = ⟦b⟧ :=
       assume Pfeq : f a = f b,
       assert Painb : a ∈ b ∘> ker f, from calc
       f (b⁻¹*a) = (f b⁻¹) * (f a) : by rewrite Hom
@@ -142,12 +146,12 @@ lemma ker_coset_inj (a b : A) : (ker_natural_map Hom ⟦a⟧ = ker_natural_map H
       ... = 1 : by rewrite (mul.left_inv (f a)),
       quot.sound (@subg_in_lcoset_same_lcoset _ _ (ker f) _ a b Painb)
 
-lemma ker_map_is_inj : injective (ker_natural_map Hom) :=
+lemma ker_map_is_inj : injective (ker_natural_map : coset_of (ker f) → B) :=
   take aK bK,
-      quot.ind (λ a, quot.ind (λ b, ker_coset_inj Hom a b) bK) aK
+      quot.ind (λ a, quot.ind (λ b, ker_coset_inj a b) bK) aK
 -- a special case of the fundamental homomorphism theorem or the first isomorphism theorem
-theorem first_isomorphism_theorem : is_iso (ker_natural_map Hom) :=
-  and.intro (ker_map_is_inj Hom) (ker_map_is_hom Hom)
+theorem first_isomorphism_theorem : is_iso (ker_natural_map : coset_of (ker f) → B) :=
+  and.intro ker_map_is_inj ker_map_is_hom
 
 end hom_theorem        
 end group_hom
