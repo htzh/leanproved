@@ -107,6 +107,7 @@ include s2
 variable {f : A → B}
 variable [hom : hom_class f]
 include hom
+-- bridge to lemmas that don't use inference but depend on the Prop directly
 private lemma Hom : is_hom f := @hom_class.hom _ _ _ _ f hom
 definition ker_nsubg [instance] : is_normal_subgroup (ker f) :=
            is_normal_subgroup.mk (ker.has_one f Hom) (ker.mul_closed f Hom)
