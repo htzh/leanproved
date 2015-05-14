@@ -23,8 +23,6 @@ variable [s2 : group B]
 include s1
 include s2
 definition is_hom (f : A → B) := ∀ a b, f (a*b) = (f a)*(f b)
-structure hom_class [class] (f : A → B) : Type :=
-  (hom : is_hom f)
 definition is_iso (f : A → B) := injective f ∧ is_hom f
 variable f : A → B
 variable Hom : is_hom f
@@ -104,11 +102,15 @@ variable [s1 : group A]
 variable [s2 : group B]
 include s1
 include s2
-variable {f : A → B}
-variable [hom : hom_class f]
-include hom
+structure hom_class [class] : Type :=
+  (hom : A → B) (is_hom : @is_hom A B s1 s2 hom)
+attribute hom_class.hom [coercion]
+-- need to spell out that f is A to B otherwise it is ambiguous
+variable [f : @hom_class A B _ _]
+include f
 -- bridge to lemmas that don't use inference but depend on the Prop directly
-private lemma Hom : is_hom f := @hom_class.hom _ _ _ _ f hom
+private lemma Hom : is_hom f := @hom_class.is_hom A B s1 s2 _
+check @Hom
 definition ker_nsubg [instance] : is_normal_subgroup (ker f) :=
            is_normal_subgroup.mk (ker.has_one f Hom) (ker.mul_closed f Hom)
            (ker.has_inv f Hom) (ker.normal f Hom)
