@@ -32,19 +32,20 @@ theorem hom_map_one : f 1 = 1 :=
         calc f 1 = f (1*1) : mul_one
         ... = (f 1) * (f 1) : Hom,
         eq.symm (mul.right_inv (f 1) ▸ (mul_inv_eq_of_eq_mul P))
-check hom_map_one
+check @hom_map_one
 theorem hom_map_inv (a : A) : f a⁻¹ = (f a)⁻¹ :=
         assert P : f 1 = 1, from hom_map_one f Hom,
         assert P1 : f (a⁻¹ * a) = 1, from (eq.symm (mul.left_inv a)) ▸ P,
         assert P2 : (f a⁻¹) * (f a) = 1, from (Hom a⁻¹ a) ▸ P1,
         assert P3 : (f a⁻¹) * (f a) = (f a)⁻¹ * (f a), from eq.symm (mul.left_inv (f a)) ▸ P2,
         mul_right_cancel P3
+check @in_image
 theorem hom_map_mul_closed (H : set A) : mul_closed_on H → mul_closed_on (f '[H]) :=
         assume Pclosed, assume b1, assume b2,
-        assume Pimage : b1 ∈ f '[ H] ∧ b2 ∈ f '[ H],
-        obtain a1 (Pa1 : a1 ∈ H ∧ f a1 = b1), from and.left Pimage,
-        obtain a2 (Pa2 : a2 ∈ H ∧ f a2 = b2), from and.right Pimage,
-        assert Pa1a2 : a1 * a2 ∈ H, from Pclosed a1 a2 (and.intro (and.left Pa1) (and.left Pa2)),
+        assume Pb1 : b1 ∈ f '[ H], assume Pb2 : b2 ∈ f '[ H],
+        obtain a1 (Pa1 : a1 ∈ H ∧ f a1 = b1), from Pb1,
+        obtain a2 (Pa2 : a2 ∈ H ∧ f a2 = b2), from Pb2,
+        assert Pa1a2 : a1 * a2 ∈ H, from Pclosed a1 a2 (and.left Pa1) (and.left Pa2),
         assert Pb1b2 : f (a1 * a2) = b1 * b2, from calc
         f (a1 * a2) = f a1 * f a2 : Hom a1 a2
         ... = b1 * f a2 : {and.right Pa1}
@@ -58,9 +59,9 @@ lemma ker.has_inv (Hom : is_hom f) : subgroup.has_inv (ker f) :=
       ... = 1⁻¹ : by rewrite Pa
       ... = 1 : by rewrite inv_one
 lemma ker.mul_closed (Hom : is_hom f) : mul_closed_on (ker f) :=
-      take x y, assume Pand : f x = 1 ∧ f y = 1, calc
+      take x y, assume (Px : f x = 1) (Py : f y = 1), calc
       f (x*y) = (f x) * (f y) : by rewrite Hom
-      ... = 1 : by rewrite [and.left Pand, and.right Pand, mul_one]
+      ... = 1 : by rewrite [Px, Py, mul_one]
 lemma ker.normal (Hom : is_hom f) : same_left_right_coset (ker f) :=
       take a, funext (assume x, begin
       esimp [ker, set_of, glcoset, grcoset],
@@ -103,7 +104,7 @@ variable [s2 : group B]
 include s1
 include s2
 structure hom_class [class] : Type :=
-  (hom : A → B) (is_hom : @is_hom A B s1 s2 hom)
+  (hom : A → B) (is_hom : is_hom hom)
 attribute hom_class.hom [coercion]
 -- need to spell out that f is A to B otherwise it is ambiguous
 variable [f : @hom_class A B _ _]
@@ -144,9 +145,9 @@ lemma ker_coset_inj (a b : A) : (ker_natural_map ⟦a⟧ = ker_natural_map ⟦b�
       assume Pfeq : f a = f b,
       assert Painb : a ∈ b ∘> ker f, from calc
       f (b⁻¹*a) = (f b⁻¹) * (f a) : by rewrite Hom
-      ... = (f b)⁻¹ * (f a) : by rewrite (hom_map_inv f Hom)
-      ... = (f a)⁻¹ * (f a) : by rewrite Pfeq
-      ... = 1 : by rewrite (mul.left_inv (f a)),
+      ... = (f b)⁻¹ * (f a)       : by rewrite (hom_map_inv f Hom)
+      ... = (f a)⁻¹ * (f a)       : by rewrite Pfeq
+      ... = 1                     : by rewrite (mul.left_inv (f a)),
       quot.sound (@subg_in_lcoset_same_lcoset _ _ (ker f) _ a b Painb)
 
 lemma ker_map_is_inj : injective (ker_natural_map : coset_of (ker f) → B) :=

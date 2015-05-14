@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 
 Author : Haitao Zhang
 -/
-import algebra.group data.set data.fintype .extra
+import algebra.group data.set .extra
 open function
 -- ⁻¹ in eq.ops conflicts with group ⁻¹
 -- open eq.ops
@@ -180,13 +180,13 @@ lemma lcoset_rcoset_assoc a b (H : set A) : a ∘> H <∘ b = (a ∘> H) <∘ b 
   funext (assume x, begin
   esimp [glcoset, grcoset], rewrite mul.assoc
   end)
-definition mul_closed_on H := ∀ x y, (x ∈ H ∧ y ∈ H) → x * y ∈ H
+definition mul_closed_on H := ∀ x y, x ∈ H → y ∈ H → x * y ∈ H
 lemma closed_lcontract a (H : set A) : mul_closed_on H → a ∈ H → a ∘> H ⊆ H :=
       begin
       rewrite [↑mul_closed_on, ↑glcoset, ↑subset, ↑mem],
       intro Pclosed, intro PHa, intro x, intro PHainvx,
       exact (eq.subst (mul_inv_cancel_left a x)
-                      (Pclosed a (a⁻¹*x) (and.intro PHa PHainvx)))
+                      (Pclosed a (a⁻¹*x) PHa PHainvx))
       end
 lemma closed_rcontract a (H : set A) : mul_closed_on H → a ∈ H → H <∘ a ⊆ H :=
       assume P1 : mul_closed_on H,
@@ -196,7 +196,7 @@ lemma closed_rcontract a (H : set A) : mul_closed_on H → a ∈ H → H <∘ a 
         intro x,
         rewrite [↑grcoset, ↑mem],
         intro P3,
-        exact (eq.subst (inv_mul_cancel_right x a) (P1 (x * a⁻¹) a (and.intro P3 P2)))
+        exact (eq.subst (inv_mul_cancel_right x a) (P1 (x * a⁻¹) a P3 P2))
       end
 lemma closed_lcontract_set a (H G : set A) : mul_closed_on G → H ⊆ G → a∈G → a∘>H ⊆ G :=
       assume Pclosed, assume PHsubG, assume PainG,
@@ -241,14 +241,14 @@ lemma subgroup_coset_id : ∀ a, a ∈ H → (a ∘> H = H ∧ H <∘ a = H) :=
           esimp [glcoset, mem],
           apply iff.intro,
             apply Pl,
-            intro PHx, exact (subg_mul_closed a⁻¹ x (and.intro PHainv PHx))
+            intro PHx, exact (subg_mul_closed a⁻¹ x PHainv PHx)
         end))
       (setext (assume x,
         begin
           esimp [grcoset, mem],
           apply iff.intro,
             apply Pr,
-            intro PHx, exact (subg_mul_closed x a⁻¹ (and.intro PHx PHainv))
+            intro PHx, exact (subg_mul_closed x a⁻¹ PHx PHainv)
         end))
 lemma subgroup_lcoset_id : ∀ a, a ∈ H → a ∘> H = H :=
       take a, assume PHa : H a,
