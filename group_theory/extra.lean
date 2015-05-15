@@ -79,6 +79,14 @@ lemma bijective_eq_bij_on_univ {f : A → B} : bijective f = bij_on f univ univ 
 
 theorem bijective_compose {g : B → C} {f : A → B} (Hg : bijective g) (Hf : bijective f) : bijective (g ∘ f) :=
         eq.symm bijective_eq_bij_on_univ ▸ bij_on_compose (bijective_eq_bij_on_univ ▸ Hg) (bijective_eq_bij_on_univ ▸ Hf)
+
+theorem id_is_inj : injective (@id A) := take a1 a2,
+        by rewrite ↑id; intro H; exact H
+theorem id_is_surj : surjective (@id A) := take a, exists.intro a rfl
+theorem id_is_bij : bijective (@id A) := and.intro id_is_inj id_is_surj
+lemma left_id (f : A → B) : id ∘ f = f := rfl
+lemma right_id (f : A → B) : f ∘ id = f := rfl
+
 end
 end function
 
