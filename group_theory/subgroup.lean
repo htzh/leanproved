@@ -320,7 +320,7 @@ lemma nsubg_same_lcoset_product : ∀ a1 a2 b1 b2, (a1 ~ b1) → (a2 ~ b2) →  
 check @nsubg_same_lcoset_product        
 example (a b : A) : (a⁻¹ ~ b⁻¹) = (a⁻¹ ∘> N = b⁻¹ ∘> N) := rfl
 lemma nsubg_same_lcoset_inv : ∀ a b, (a ~ b) → (a⁻¹ ~ b⁻¹) :=
-  take a b, assume Psame, calc
+  take a b, assume Psame : a ∘> N = b ∘> N, calc
   a⁻¹ ∘> N = a⁻¹*b*b⁻¹ ∘> N    : by rewrite mul_inv_cancel_right
   ... = a⁻¹*b ∘> b⁻¹ ∘> N      : by rewrite glcoset_compose
   ... = a⁻¹*b ∘> (N <∘ b⁻¹)    : by rewrite nsubg_normal
