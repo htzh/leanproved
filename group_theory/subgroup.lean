@@ -4,13 +4,19 @@ Released under Apache 2.0 license as described in the file LICENSE.
 
 Author : Haitao Zhang
 -/
-import algebra.group data.set .extra
+import data.nat data.finset algebra.group data.set .extra
 open function
 -- ⁻¹ in eq.ops conflicts with group ⁻¹
 -- open eq.ops
 notation H1 ▸ H2 := eq.subst H1 H2
 open set
 local attribute set [reducible]
+
+section
+open finset
+-- overloading problem, use set.subset explicitly for now
+--example (A : Type) (x : A) (S H : set A) (Pin : x ∈ S) (Psub : S ⊆ H) : x ∈ H := Psub Pin
+end
 
 namespace algebra
 
@@ -20,15 +26,15 @@ section
 variable {A : Type}
 variable [s : semigroup A]
 include s
-definition lmul a := λ x, a * x
-definition rmul a := λ x, x * a
+definition lmul (a : A) := λ x, a * x
+definition rmul (a : A) := λ x, x * a
 definition l a (S : set A) := (lmul a) '[S]
 definition r a (S : set A) := (rmul a) '[S]
-lemma lmul_compose : ∀ a b, (lmul a) ∘ (lmul b) = lmul (a*b) :=
+lemma lmul_compose : ∀ (a b : A), (lmul a) ∘ (lmul b) = lmul (a*b) :=
       take a, take b,
       funext (assume x, by
         rewrite [↑function.compose, ↑lmul, mul.assoc])
-lemma rmul_compose : ∀ a b, (rmul a) ∘ (rmul b) = rmul (b*a) :=
+lemma rmul_compose : ∀ (a b : A), (rmul a) ∘ (rmul b) = rmul (b*a) :=
       take a, take b,
       funext (assume x, by
         rewrite [↑function.compose, ↑rmul, mul.assoc])
@@ -39,8 +45,8 @@ lemma rcompose a b (S : set A) : r a (r b S) = r (b*a) S :=
       calc (rmul a) '[(rmul b) '[S]] = ((rmul a) ∘ (rmul b)) '[S] : image_compose
       ... = rmul (b*a) '[S] : rmul_compose
 lemma l_sub a (S H : set A) : S ⊆ H → (l a S) ⊆ (l a H) := image_subset S H (lmul a)
-definition l_same S a b := l a S = l b S
-definition r_same S a b := r a S = r b S
+definition l_same S (a b : A) := l a S = l b S
+definition r_same S (a b : A) := r a S = r b S
 lemma l_same.refl S (a : A) : l_same S a a := rfl
 lemma l_same.symm S (a b : A) : l_same S a b → l_same S b a := eq.symm
 lemma l_same.trans S (a b c : A) : l_same S a b → l_same S b c → l_same S a c := eq.trans
@@ -108,6 +114,12 @@ lemma is_conj.trans (a b c : A) : a ~ b → b ~ c → a ~ c :=
       x*y ∘c c = x ∘c y ∘c c : conj_compose
       ... = x ∘c b : Py
       ... = a : Px)
+
+lemma lmul_inv_on (a : A) (H : set A) : left_inv_on (lmul_by a⁻¹) (lmul_by a) H :=
+      take x Px, show a⁻¹*(a*x) = x, by rewrite inv_mul_cancel_left
+lemma lmul_inj_on (a : A) (H : set A) : inj_on (lmul_by a) H :=
+      inj_on_of_left_inv_on (lmul_inv_on a H)
+
 lemma glcoset_eq_lcoset a (H : set A) : a ∘> H = coset.l a H :=
       setext
       begin
@@ -140,6 +152,10 @@ lemma grcoset_eq_rcoset a (H : set A) : H <∘ a = coset.r a H :=
               obtain x_1 Pand, from Pex,
                 eq.subst (eq_mul_inv_of_mul_eq (and.right Pand)) (and.left Pand)
       end
+lemma glcoset_sub a (S H : set A) : S ⊆ H → (a ∘> S) ⊆ (a ∘> H) :=
+      assume Psub,
+      assert P : _, from coset.l_sub a S H Psub,
+      eq.symm (glcoset_eq_lcoset a S) ▸ eq.symm (glcoset_eq_lcoset a H) ▸ P
 lemma glcoset_compose (a b : A) (H : set A) : a ∘> b ∘> H = a*b ∘> H :=
       begin
       rewrite [*glcoset_eq_lcoset], exact (coset.lcompose a b H)
@@ -180,7 +196,7 @@ lemma lcoset_rcoset_assoc a b (H : set A) : a ∘> H <∘ b = (a ∘> H) <∘ b 
   funext (assume x, begin
   esimp [glcoset, grcoset], rewrite mul.assoc
   end)
-definition mul_closed_on H := ∀ x y, x ∈ H → y ∈ H → x * y ∈ H
+definition mul_closed_on H := ∀ (x y : A), x ∈ H → y ∈ H → x * y ∈ H
 lemma closed_lcontract a (H : set A) : mul_closed_on H → a ∈ H → a ∘> H ⊆ H :=
       begin
       rewrite [↑mul_closed_on, ↑glcoset, ↑subset, ↑mem],
@@ -204,12 +220,12 @@ lemma closed_lcontract_set a (H G : set A) : mul_closed_on G → H ⊆ G → a�
       assert PaHsubaG : a ∘> H ⊆ a ∘> G, from
         eq.symm (glcoset_eq_lcoset a H) ▸ eq.symm (glcoset_eq_lcoset a G) ▸ (coset.l_sub a H G PHsubG),
       subset.trans _ _ _ PaHsubaG PaGsubG
-definition subgroup.has_inv H := ∀ a, a ∈ H → a⁻¹ ∈ H
+definition subgroup.has_inv H := ∀ (a : A), a ∈ H → a⁻¹ ∈ H
 -- two ways to define the same equivalence relatiohship for subgroups
-definition in_lcoset H a b := a ∈ b ∘> H
-definition in_rcoset H a b := a ∈ H <∘ b
-definition same_lcoset [reducible] H a b := a ∘> H = b ∘> H
-definition same_rcoset [reducible] H a b := H <∘ a = H <∘ b
+definition in_lcoset H (a b : A) := a ∈ b ∘> H
+definition in_rcoset H (a b : A) := a ∈ H <∘ b
+definition same_lcoset [reducible] H (a b : A) := a ∘> H = b ∘> H
+definition same_rcoset [reducible] H (a b : A) := H <∘ a = H <∘ b
 definition same_left_right_coset (N : set A) := ∀ x, x ∘> N = N <∘ x
 structure is_subgroup [class] (H : set A) : Type :=
   (has_one : H 1)
@@ -227,7 +243,7 @@ variable {H : set A}
 variable [is_subg : is_subgroup H]
 include is_subg
 
-lemma subg_has_one : H 1 := !is_subgroup.has_one
+lemma subg_has_one : H (1 : A) := @is_subgroup.has_one A s H is_subg
 lemma subg_mul_closed : mul_closed_on H := @is_subgroup.mul_closed A s H is_subg
 lemma subg_has_inv : subgroup.has_inv H := @is_subgroup.has_inv A s H is_subg
 lemma subgroup_coset_id : ∀ a, a ∈ H → (a ∘> H = H ∧ H <∘ a = H) :=
@@ -290,8 +306,59 @@ lemma subg_same_lcoset.trans (a b c : A) : same_lcoset H a b → same_lcoset H b
       eq.trans
 lemma subg_same_rcoset.trans (a b c : A) : same_rcoset H a b → same_rcoset H b c → same_rcoset H a c :=
       eq.trans
+variable {S : set A}
+lemma subg_lcoset_subset_subg (Psub : S ⊆ H) (a : A) : a ∈ H → a ∘> S ⊆ H :=
+      assume Pin, have P : a ∘> S ⊆ a ∘> H, from glcoset_sub a S H Psub,
+      subgroup_lcoset_id a Pin ▸ P
+
 end subgroup
 
+section lagrange
+open finset
+variable {A : Type}
+variable [deceq : decidable_eq A]
+include deceq
+private lemma set_subset (S H : finset A) (Psub : S ⊆ H) : ts S ⊆ ts H := subset_eq_to_set_subset S H ▸ Psub
+variable [s : group A]
+include s
+definition fin_lcoset (H : finset A) (a : A) := finset.image (lmul_by a) H
+variable {H : finset A}
+lemma fin_lcoset_eq (a : A) : ts (fin_lcoset H a) = a ∘> (ts H) := calc
+      ts (fin_lcoset H a) = coset.l a (ts H) : to_set_image
+      ... = a ∘> (ts H) : glcoset_eq_lcoset
+lemma fin_lcoset_card (a : A) : card (fin_lcoset H a) = card H :=
+      card_image_eq_of_inj_on (lmul_inj_on a (ts H))
+variable [is_subgH : is_subgroup (to_set H)]
+include is_subgH
+lemma fin_mem_lcoset (g : A) : g ∈ fin_lcoset H g :=
+      have P : g ∈ g ∘> ts H, from and.left (subg_in_coset_refl g),
+      assert P1 : g ∈ ts (fin_lcoset H g), from eq.symm (fin_lcoset_eq g) ▸ P,
+      eq.symm (@mem_eq_mem_to_set _ _ _ g) ▸ P1
+lemma fin_mem_lcoset_mem_subg {S : finset A} {x h : A} (Psub : S ⊆ H) : x ∈ H → h ∈ fin_lcoset S x → h ∈ H :=
+      assert Psubs : set.subset (ts S) (ts H), from subset_eq_to_set_subset S H ▸ Psub,
+      assume Pxs : x ∈ ts H,
+      assert Pcoset : set.subset (x ∘> ts S) (ts H), from subg_lcoset_subset_subg Psubs x Pxs,
+      assume Ph, assert Phs : h ∈ x ∘> ts S, from fin_lcoset_eq x ▸ Ph,
+      Pcoset Phs
+
+variable {G : finset A}
+variable [is_subgG : is_subgroup (to_set G)]
+include is_subgG
+check @mem_eq_mem_to_set
+check @fin_mem_lcoset
+lemma fin_mem_lcosets_of_mem_subg (Psub : H ⊆ G) (g : A) : g ∈ G → g ∈ Union G (fin_lcoset H) :=
+       assume PinG,
+       have Pincoset : ∃ x, x ∈ G ∧ g ∈ (fin_lcoset H x), from exists.intro g (and.intro PinG (fin_mem_lcoset g)),
+       iff.elim_right (mem_Union_iff G (fin_lcoset H) _) Pincoset
+lemma fin_mem_subg_of_mem_lcosets (Psub : H ⊆ G) (g : A) : g ∈ Union G (fin_lcoset H) → g ∈ G :=
+      assume Punion,
+      have Pincoset : ∃ x, x ∈ G ∧ g ∈ (fin_lcoset H x), from iff.elim_left (mem_Union_iff G (fin_lcoset H) _) Punion,
+      obtain g Pg, from Pincoset,
+      fin_mem_lcoset_mem_subg Psub (and.left Pg) (and.right Pg)
+lemma fin_subg_eq_union_lcosets (Psub : H ⊆ G) : G = Union G (fin_lcoset H) :=
+      ext (take g, iff.intro (fin_mem_lcosets_of_mem_subg Psub g) (fin_mem_subg_of_mem_lcosets Psub g))
+
+end lagrange
 section normal_subg
 open quot
 variable {A : Type}
