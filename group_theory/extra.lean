@@ -117,6 +117,7 @@ variables {A B : Type}
 variables [deceqA : decidable_eq A] [deceqB : decidable_eq B]
 include deceqA
 include deceqB
+
 lemma Union_insert (f : A → finset B) {a : A} {s : finset A} : Union (insert a s) f = f a ∪ Union s f :=
       match decidable_mem a s with
       | decidable.inl Pin :=
@@ -142,6 +143,7 @@ lemma image_eq_Union_index_image (s : finset A) (f : A → finset B) : Union s f
 
 end image
 end finset
+
 namespace list
 section nodup
 open function

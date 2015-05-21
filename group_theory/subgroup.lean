@@ -318,13 +318,14 @@ open finset
 variable {A : Type}
 variable [deceq : decidable_eq A]
 include deceq
-private lemma set_subset (S H : finset A) (Psub : S ⊆ H) : ts S ⊆ ts H := subset_eq_to_set_subset S H ▸ Psub
 variable [s : group A]
 include s
+
 definition fin_lcoset (H : finset A) (a : A) := finset.image (lmul_by a) H
 definition fin_lcosets (H G : finset A) := image (fin_lcoset H) G
 
 variable {H : finset A}
+
 lemma fin_lcoset_eq (a : A) : ts (fin_lcoset H a) = a ∘> (ts H) := calc
       ts (fin_lcoset H a) = coset.l a (ts H) : to_set_image
       ... = a ∘> (ts H) : glcoset_eq_lcoset
@@ -336,6 +337,7 @@ lemma fin_lcosets_card_eq {G : finset A} : ∀ gH, gH ∈ fin_lcosets H G → ca
 
 variable [is_subgH : is_subgroup (to_set H)]
 include is_subgH
+
 lemma fin_lcoset_same (x a : A) : x ∈ (fin_lcoset H a) = (fin_lcoset H x = fin_lcoset H a) :=
       begin
         rewrite mem_eq_mem_to_set,
@@ -356,8 +358,7 @@ lemma fin_mem_lcoset_mem_subg {S : finset A} {x h : A} (Psub : S ⊆ H) : x ∈ 
 variable {G : finset A}
 variable [is_subgG : is_subgroup (to_set G)]
 include is_subgG
-check @mem_eq_mem_to_set
-check @fin_mem_lcoset
+
 lemma fin_mem_lcosets_of_mem_subg (Psub : H ⊆ G) (g : A) : g ∈ G → g ∈ Union G (fin_lcoset H) :=
        assume PinG,
        have Pincoset : ∃ x, x ∈ G ∧ g ∈ (fin_lcoset H x), from exists.intro g (and.intro PinG (fin_mem_lcoset g)),
@@ -383,10 +384,9 @@ lemma fin_lcoset_disjoint (a1 a2 : finset A) (Pa1 : a1 ∈ fin_lcosets H G) (Pa2
       intro Pxg1, rewrite [Pxg1, and.right Pg1, and.right Pg2],
       intro Pe, exact absurd Pe Pne
       end
-open nat
-local attribute nat.comm_semiring [instance]
 
-check @nat.Sum_ext
+open nat
+
 theorem lagrange_theorem (Psub : H ⊆ G) : card G = card (fin_lcosets H G) * card H := calc
         card G = card (Union (fin_lcosets H G) id) : fin_subg_eq_union_lcosets Psub
         ... = nat.Sum (fin_lcosets H G) card : card_Union_of_disjoint _ id fin_lcoset_disjoint
@@ -394,6 +394,7 @@ theorem lagrange_theorem (Psub : H ⊆ G) : card G = card (fin_lcosets H G) * ca
         ... = card (fin_lcosets H G) * card H : Sum_const_eq_card_mul
 
 end lagrange
+
 section normal_subg
 open quot
 variable {A : Type}
@@ -419,7 +420,7 @@ lemma nsubg_same_lcoset_product : ∀ a1 a2 b1 b2, (a1 ~ b1) → (a2 ~ b2) →  
   ... = N <∘ b1 <∘ b2 :    by rewrite (nsubg_normal N)
   ... = N <∘ (b1*b2) :     by rewrite grcoset_compose
   ... = (b1*b2) ∘> N :     by rewrite (nsubg_normal N)
-check @nsubg_same_lcoset_product        
+
 example (a b : A) : (a⁻¹ ~ b⁻¹) = (a⁻¹ ∘> N = b⁻¹ ∘> N) := rfl
 lemma nsubg_same_lcoset_inv : ∀ a b, (a ~ b) → (a⁻¹ ~ b⁻¹) :=
   take a b, assume Psame : a ∘> N = b ∘> N, calc
@@ -435,8 +436,7 @@ definition nsubg_setoid [instance] : setoid A :=
   setoid.mk (same_lcoset N)
   (mk_equivalence (same_lcoset N) (subg_same_lcoset.refl) (subg_same_lcoset.symm) (subg_same_lcoset.trans))
 definition coset_of : Type := quot (nsubg_setoid N)
-check @nsubg_setoid
-check @coset_of
+
 definition coset_inv_base (a : A) : coset_of N := ⟦a⁻¹⟧
 definition coset_product (a b : A) : coset_of N := ⟦a*b⟧
 lemma coset_product_well_defined : ∀ a1 a2 b1 b2, (a1 ~ b1) → (a2 ~ b2) → ⟦a1*a2⟧ = ⟦b1*b2⟧ :=
@@ -474,6 +474,7 @@ definition mk_quotient_group : group (coset_of N):=
            group.mk (coset_mul N) (coset_mul.assoc N) (coset_one N)  (coset_mul.one_mul N) (coset_mul.mul_one N) (coset_inv N) (coset_mul.left_inv N)
 
 end normal_subg
+
 namespace group
 namespace quotient
 section
