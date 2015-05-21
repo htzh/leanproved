@@ -5,7 +5,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author : Haitao Zhang
 -/
 -- These belong in the library somewhere.
-import algebra.group data.set
+import algebra.group data.nat data.set data.list data.finset
+
 -- Thought this might be useful in converting different forms of Prop
 theorem and_imp_curry (a b c : Prop) : (a ∧ b → c) = (a → b → c) :=
         propext (iff.intro (λ Pl a b, Pl (and.intro a b))
@@ -108,3 +109,31 @@ lemma comm_mul_eq_one (a b : A) : a*b = 1 = (b*a = 1) :=
        by rewrite [eq.symm Pinv, mul.left_inv]))
 end group
 end algebra
+
+namespace finset
+section image
+open function
+variables {A B : Type}
+variables [deceqA : decidable_eq A] [deceqB : decidable_eq B]
+include deceqA
+include deceqB
+lemma Union_insert (f : A → finset B) {a : A} {s : finset A} : Union (insert a s) f = f a ∪ Union s f :=
+      match decidable_mem a s with
+      | decidable.inl Pin := sorry
+      | decidable.inr Pnin := Union_insert_of_not_mem f Pnin
+      end
+lemma image_eq_Union_index_image (s : finset A) (f : A → finset B) : Union s f = Union (image f s) id :=
+      finset.induction_on s
+      (begin rewrite Union_empty end)
+      (take s1 a Pa IH, by rewrite [image_insert, *Union_insert, IH])
+
+end image
+end finset
+namespace list
+section nodup
+open function
+variables {A B : Type}
+lemma inj_map_nodup (f : A → B) (inj : injective f) : ∀ (l : list A), nodup l → nodup (map f l) := sorry
+  
+end nodup
+end list

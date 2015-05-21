@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 
 Author : Haitao Zhang
 -/
-import data.nat data.finset algebra.group data.set .extra
+import data algebra.group data .extra
 open function
 -- ⁻¹ in eq.ops conflicts with group ⁻¹
 -- open eq.ops
@@ -14,8 +14,7 @@ local attribute set [reducible]
 
 section
 open finset
--- overloading problem, use set.subset explicitly for now
---example (A : Type) (x : A) (S H : set A) (Pin : x ∈ S) (Psub : S ⊆ H) : x ∈ H := Psub Pin
+-- overloading problem, use set.subset explicitly for now-example (A : Type) (x : A) (S H : set A) (Pin : x ∈ S) (Psub : S ⊆ H) : x ∈ H := Psub Pin
 end
 
 namespace algebra
@@ -222,8 +221,8 @@ lemma closed_lcontract_set a (H G : set A) : mul_closed_on G → H ⊆ G → a�
       subset.trans _ _ _ PaHsubaG PaGsubG
 definition subgroup.has_inv H := ∀ (a : A), a ∈ H → a⁻¹ ∈ H
 -- two ways to define the same equivalence relatiohship for subgroups
-definition in_lcoset H (a b : A) := a ∈ b ∘> H
-definition in_rcoset H (a b : A) := a ∈ H <∘ b
+definition in_lcoset [reducible] H (a b : A) := a ∈ b ∘> H
+definition in_rcoset [reducible] H (a b : A) := a ∈ H <∘ b
 definition same_lcoset [reducible] H (a b : A) := a ∘> H = b ∘> H
 definition same_rcoset [reducible] H (a b : A) := H <∘ a = H <∘ b
 definition same_left_right_coset (N : set A) := ∀ x, x ∘> N = N <∘ x
@@ -287,7 +286,8 @@ lemma subg_same_lcoset_in_lcoset (a b : A) : same_lcoset H a b → in_lcoset H a
       assume Psame : a∘>H = b∘>H,
       assert Pa : a ∈ a∘>H, from and.left (subg_in_coset_refl a),
       by exact (Psame ▸ Pa)
-
+lemma subg_lcoset_same (a b : A) : in_lcoset H a b = (a∘>H = b∘>H) :=
+      propext(iff.intro (subg_in_lcoset_same_lcoset a b) (subg_same_lcoset_in_lcoset a b))
 lemma subg_rcoset_same (a b : A) : in_rcoset H a b = (H<∘a = H<∘b) :=
       propext(iff.intro 
       (assume Pa_in_b : H (a*b⁻¹),
@@ -322,6 +322,7 @@ private lemma set_subset (S H : finset A) (Psub : S ⊆ H) : ts S ⊆ ts H := su
 variable [s : group A]
 include s
 definition fin_lcoset (H : finset A) (a : A) := finset.image (lmul_by a) H
+definition fin_lcosets (H G : finset A) := image (fin_lcoset H) G
 variable {H : finset A}
 lemma fin_lcoset_eq (a : A) : ts (fin_lcoset H a) = a ∘> (ts H) := calc
       ts (fin_lcoset H a) = coset.l a (ts H) : to_set_image
@@ -330,6 +331,12 @@ lemma fin_lcoset_card (a : A) : card (fin_lcoset H a) = card H :=
       card_image_eq_of_inj_on (lmul_inj_on a (ts H))
 variable [is_subgH : is_subgroup (to_set H)]
 include is_subgH
+lemma fin_lcoset_same (x a : A) : x ∈ (fin_lcoset H a) = (fin_lcoset H x = fin_lcoset H a) :=
+      begin
+        rewrite mem_eq_mem_to_set,
+        rewrite [eq_eq_to_set_eq, *(fin_lcoset_eq x), fin_lcoset_eq a],
+        exact (subg_lcoset_same x a)
+      end
 lemma fin_mem_lcoset (g : A) : g ∈ fin_lcoset H g :=
       have P : g ∈ g ∘> ts H, from and.left (subg_in_coset_refl g),
       assert P1 : g ∈ ts (fin_lcoset H g), from eq.symm (fin_lcoset_eq g) ▸ P,
@@ -355,9 +362,28 @@ lemma fin_mem_subg_of_mem_lcosets (Psub : H ⊆ G) (g : A) : g ∈ Union G (fin_
       have Pincoset : ∃ x, x ∈ G ∧ g ∈ (fin_lcoset H x), from iff.elim_left (mem_Union_iff G (fin_lcoset H) _) Punion,
       obtain g Pg, from Pincoset,
       fin_mem_lcoset_mem_subg Psub (and.left Pg) (and.right Pg)
-lemma fin_subg_eq_union_lcosets (Psub : H ⊆ G) : G = Union G (fin_lcoset H) :=
-      ext (take g, iff.intro (fin_mem_lcosets_of_mem_subg Psub g) (fin_mem_subg_of_mem_lcosets Psub g))
-
+lemma fin_subg_eq_union_lcosets (Psub : H ⊆ G) : G = Union (fin_lcosets H G) id := calc
+      G = Union G (fin_lcoset H) : ext (take g, iff.intro (fin_mem_lcosets_of_mem_subg Psub g) (fin_mem_subg_of_mem_lcosets Psub g))
+      ... = Union (fin_lcosets H G) id : image_eq_Union_index_image
+lemma fin_lcoset_disjoint (a1 a2 : finset A) (Pa1 : a1 ∈ fin_lcosets H G) (Pa2 : a2 ∈ fin_lcosets H G) : a1 ≠ a2 → a1 ∩ a2 = ∅ :=
+      assume Pne,
+      assert Pe1 : _, from exists_of_mem_image Pa1, obtain g1 Pg1, from Pe1,
+      assert Pe2 : _, from exists_of_mem_image Pa2, obtain g2 Pg2, from Pe2,
+      begin
+      apply inter_eq_empty_of_disjoint,
+      apply disjoint.intro,
+      rewrite [eq.symm (and.right Pg1), eq.symm (and.right Pg2)],
+      intro x,
+      rewrite [*fin_lcoset_same],
+      intro Pxg1, rewrite [Pxg1, and.right Pg1, and.right Pg2],
+      intro Pe, exact absurd Pe Pne
+      end
+open nat
+theorem lagrange_theorem (Psub : H ⊆ G) : card G = card (fin_lcosets H G) * card H := calc
+        card G = card (Union (fin_lcosets H G) id) : fin_subg_eq_union_lcosets Psub
+        ... = ∑ x ∈ fin_lcosets H G, card x : card_Union_of_disjoint _ id fin_lcoset_disjoint
+        ... = ∑ x ∈ fin_lcosets H G, card H : Sum_ext (take g, fin_lcoset_card g)
+        ... = card (fin_lcosets H G) * card H : sorry
 end lagrange
 section normal_subg
 open quot
