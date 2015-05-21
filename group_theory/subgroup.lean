@@ -323,12 +323,17 @@ variable [s : group A]
 include s
 definition fin_lcoset (H : finset A) (a : A) := finset.image (lmul_by a) H
 definition fin_lcosets (H G : finset A) := image (fin_lcoset H) G
+
 variable {H : finset A}
 lemma fin_lcoset_eq (a : A) : ts (fin_lcoset H a) = a ∘> (ts H) := calc
       ts (fin_lcoset H a) = coset.l a (ts H) : to_set_image
       ... = a ∘> (ts H) : glcoset_eq_lcoset
 lemma fin_lcoset_card (a : A) : card (fin_lcoset H a) = card H :=
       card_image_eq_of_inj_on (lmul_inj_on a (ts H))
+lemma fin_lcosets_card_eq {G : finset A} : ∀ gH, gH ∈ fin_lcosets H G → card gH = card H :=
+      take gH, assume Pcosets, obtain g Pg, from exists_of_mem_image Pcosets,
+      and.right Pg ▸ fin_lcoset_card g
+
 variable [is_subgH : is_subgroup (to_set H)]
 include is_subgH
 lemma fin_lcoset_same (x a : A) : x ∈ (fin_lcoset H a) = (fin_lcoset H x = fin_lcoset H a) :=
@@ -379,11 +384,15 @@ lemma fin_lcoset_disjoint (a1 a2 : finset A) (Pa1 : a1 ∈ fin_lcosets H G) (Pa2
       intro Pe, exact absurd Pe Pne
       end
 open nat
+local attribute nat.comm_semiring [instance]
+
+check @nat.Sum_ext
 theorem lagrange_theorem (Psub : H ⊆ G) : card G = card (fin_lcosets H G) * card H := calc
         card G = card (Union (fin_lcosets H G) id) : fin_subg_eq_union_lcosets Psub
-        ... = ∑ x ∈ fin_lcosets H G, card x : card_Union_of_disjoint _ id fin_lcoset_disjoint
-        ... = ∑ x ∈ fin_lcosets H G, card H : Sum_ext (take g, fin_lcoset_card g)
-        ... = card (fin_lcosets H G) * card H : sorry
+        ... = nat.Sum (fin_lcosets H G) card : card_Union_of_disjoint _ id fin_lcoset_disjoint
+        ... = nat.Sum (fin_lcosets H G) (λ x, card H) : nat.Sum_ext (take g P, fin_lcosets_card_eq g P)
+        ... = card (fin_lcosets H G) * card H : Sum_const_eq_card_mul
+
 end lagrange
 section normal_subg
 open quot
