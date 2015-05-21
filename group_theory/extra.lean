@@ -119,7 +119,20 @@ include deceqA
 include deceqB
 lemma Union_insert (f : A → finset B) {a : A} {s : finset A} : Union (insert a s) f = f a ∪ Union s f :=
       match decidable_mem a s with
-      | decidable.inl Pin := sorry
+      | decidable.inl Pin :=
+        begin
+        rewrite [Union_insert_of_mem f Pin],
+        apply ext,
+        intro x,
+        apply iff.intro,
+          exact mem_union_r,
+          rewrite [mem_union_eq],
+          intro Por,
+          exact or.elim Por
+            (assume Pl, begin
+              rewrite mem_Union_eq, exact (exists.intro a (and.intro Pin Pl)) end)
+            (assume Pr, Pr)
+        end
       | decidable.inr Pnin := Union_insert_of_not_mem f Pnin
       end
 lemma image_eq_Union_index_image (s : finset A) (f : A → finset B) : Union s f = Union (image f s) id :=
@@ -133,7 +146,7 @@ namespace list
 section nodup
 open function
 variables {A B : Type}
-lemma inj_map_nodup (f : A → B) (inj : injective f) : ∀ (l : list A), nodup l → nodup (map f l) := sorry
+--lemma inj_map_nodup (f : A → B) (inj : injective f) : ∀ (l : list A), nodup l → nodup (map f l) := sorry
   
 end nodup
 end list
