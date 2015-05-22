@@ -145,6 +145,8 @@ end image
 
 section eqv
 open function
+open eq.ops
+
 variable {A : Type}
 variable [deceqA : decidable_eq A]
 include deceqA
@@ -153,7 +155,7 @@ definition is_eqv_class (f : A → finset A) := ∀ a b, a ∈ f b = (f a = f b)
 definition is_restricted_cover (s : finset A) (f : A → finset A) := s = Union s f
 structure partition : Type :=
 (set : finset A) (part : A → finset A) (eqv : is_eqv_class part)
-      (complete : is_restricted_cover set part)
+      (complete : set = Union set part)
 definition eqv_classes (f : partition) : finset (finset A) := image (partition.part f) (partition.set f)
 
 lemma eqv_class_disjoint (f : partition) (a1 a2 : finset A) (Pa1 : a1 ∈ eqv_classes f) (Pa2 : a2 ∈ eqv_classes f) : a1 ≠ a2 → a1 ∩ a2 = ∅ :=
@@ -169,11 +171,27 @@ lemma eqv_class_disjoint (f : partition) (a1 a2 : finset A) (Pa1 : a1 ∈ eqv_cl
       intro Pxg1, rewrite [Pxg1, and.right Pg1, and.right Pg2],
       intro Pe, exact absurd Pe Pne      
       end
-lemma class_equation (f : @partition A _) : card (partition.set f) = nat.Sum (eqv_classes f) card := calc
-      card (partition.set f) = card (Union (partition.set f) (partition.part f)) : partition.complete f
-      ... = card (Union (image (partition.part f) (partition.set f)) id) : image_eq_Union_index_image (partition.set f) (partition.part f)
+lemma class_equation (f : @partition A _) : card (partition.set f) = nat.Sum (eqv_classes f) card :=
+      let s := (partition.set f), p := (partition.part f), img := image p s in calc
+      card s = card (Union s p) : partition.complete f
+      ... = card (Union img id) : image_eq_Union_index_image s p
       ... = card (Union (eqv_classes f) id) : rfl
       ... = nat.Sum (eqv_classes f) card : card_Union_of_disjoint _ id (eqv_class_disjoint f)
+
+lemma eqv_class_refl {f : A → finset A} (Peqv : is_eqv_class f) : ∀ a, a ∈ f a :=
+      take a, by rewrite [Peqv a a]
+-- make it a little easier to prove union from restriction
+lemma restriction_imp_union {s : finset A} (f : A → finset A) (Peqv : is_eqv_class f) : (∀ a, a ∈ s → f a ⊆ s) → s = Union s f :=
+      assume Psub, ext (take a, iff.intro
+      (assume Pains, begin
+        rewrite [(Union_insert_of_mem f Pains)⁻¹, Union_insert],
+        apply mem_union_l, exact eqv_class_refl Peqv a end)
+      (assume Painu,
+        have Pclass : ∃ x, x ∈ s ∧ a ∈ f x,
+          from iff.elim_left (mem_Union_iff s f _) Painu,
+        obtain x Px, from Pclass,
+        have Pfx : f x ⊆ s, from Psub x (and.left Px),
+        mem_of_subset_of_mem Pfx (and.right Px)))
 
 local attribute partition.part [coercion]
 

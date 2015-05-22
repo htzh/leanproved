@@ -344,6 +344,7 @@ lemma fin_lcoset_same (x a : A) : x ∈ (fin_lcoset H a) = (fin_lcoset H x = fin
         rewrite [eq_eq_to_set_eq, *(fin_lcoset_eq x), fin_lcoset_eq a],
         exact (subg_lcoset_same x a)
       end
+lemma fin_lcoset_eqv : is_eqv_class (fin_lcoset H) := fin_lcoset_same
 lemma fin_mem_lcoset (g : A) : g ∈ fin_lcoset H g :=
       have P : g ∈ g ∘> ts H, from and.left (subg_in_coset_refl g),
       assert P1 : g ∈ ts (fin_lcoset H g), from eq.symm (fin_lcoset_eq g) ▸ P,
@@ -354,10 +355,20 @@ lemma fin_mem_lcoset_mem_subg {S : finset A} {x h : A} (Psub : S ⊆ H) : x ∈ 
       assert Pcoset : set.subset (x ∘> ts S) (ts H), from subg_lcoset_subset_subg Psubs x Pxs,
       assume Ph, assert Phs : h ∈ x ∘> ts S, from fin_lcoset_eq x ▸ Ph,
       Pcoset Phs
+lemma fin_lcoset_subset {S : finset A} {x h : A} (Psub : S ⊆ H) : x ∈ H → fin_lcoset S x ⊆ H :=
+      assert Psubs : set.subset (ts S) (ts H), from subset_eq_to_set_subset S H ▸ Psub,
+      assume Pxs : x ∈ ts H,
+      assert Pcoset : set.subset (x ∘> ts S) (ts H), from subg_lcoset_subset_subg Psubs x Pxs,
+      by rewrite [subset_eq_to_set_subset, fin_lcoset_eq x]; exact Pcoset
 
 variable {G : finset A}
 variable [is_subgG : is_subgroup (to_set G)]
 include is_subgG
+
+lemma fin_lcoset_union (Psub : H ⊆ G) : G = Union G (fin_lcoset H) :=
+      restriction_imp_union (fin_lcoset H) fin_lcoset_same (fin_lcoset_subset Psub)
+lemma fin_lcoset_partition_subg (Psub : H ⊆ G) :=
+      partition.mk G (fin_lcoset H) fin_lcoset_same (restriction_imp_union (fin_lcoset H) fin_lcoset_same (fin_lcoset_subset Psub))
 
 lemma fin_mem_lcosets_of_mem_subg (Psub : H ⊆ G) (g : A) : g ∈ G → g ∈ Union G (fin_lcoset H) :=
        assume PinG,
