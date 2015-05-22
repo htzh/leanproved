@@ -344,20 +344,13 @@ lemma fin_lcoset_same (x a : A) : x ∈ (fin_lcoset H a) = (fin_lcoset H x = fin
         rewrite [eq_eq_to_set_eq, *(fin_lcoset_eq x), fin_lcoset_eq a],
         exact (subg_lcoset_same x a)
       end
-lemma fin_lcoset_eqv : is_eqv_class (fin_lcoset H) := fin_lcoset_same
 lemma fin_mem_lcoset (g : A) : g ∈ fin_lcoset H g :=
       have P : g ∈ g ∘> ts H, from and.left (subg_in_coset_refl g),
       assert P1 : g ∈ ts (fin_lcoset H g), from eq.symm (fin_lcoset_eq g) ▸ P,
       eq.symm (@mem_eq_mem_to_set _ _ _ g) ▸ P1
-lemma fin_mem_lcoset_mem_subg {S : finset A} {x h : A} (Psub : S ⊆ H) : x ∈ H → h ∈ fin_lcoset S x → h ∈ H :=
+lemma fin_lcoset_subset {S : finset A} (Psub : S ⊆ H) : ∀ x, x ∈ H → fin_lcoset S x ⊆ H :=
       assert Psubs : set.subset (ts S) (ts H), from subset_eq_to_set_subset S H ▸ Psub,
-      assume Pxs : x ∈ ts H,
-      assert Pcoset : set.subset (x ∘> ts S) (ts H), from subg_lcoset_subset_subg Psubs x Pxs,
-      assume Ph, assert Phs : h ∈ x ∘> ts S, from fin_lcoset_eq x ▸ Ph,
-      Pcoset Phs
-lemma fin_lcoset_subset {S : finset A} {x h : A} (Psub : S ⊆ H) : x ∈ H → fin_lcoset S x ⊆ H :=
-      assert Psubs : set.subset (ts S) (ts H), from subset_eq_to_set_subset S H ▸ Psub,
-      assume Pxs : x ∈ ts H,
+      take x, assume Pxs : x ∈ ts H,
       assert Pcoset : set.subset (x ∘> ts S) (ts H), from subg_lcoset_subset_subg Psubs x Pxs,
       by rewrite [subset_eq_to_set_subset, fin_lcoset_eq x]; exact Pcoset
 
@@ -365,42 +358,14 @@ variable {G : finset A}
 variable [is_subgG : is_subgroup (to_set G)]
 include is_subgG
 
-lemma fin_lcoset_union (Psub : H ⊆ G) : G = Union G (fin_lcoset H) :=
-      restriction_imp_union (fin_lcoset H) fin_lcoset_same (fin_lcoset_subset Psub)
-lemma fin_lcoset_partition_subg (Psub : H ⊆ G) :=
-      partition.mk G (fin_lcoset H) fin_lcoset_same (restriction_imp_union (fin_lcoset H) fin_lcoset_same (fin_lcoset_subset Psub))
-
-lemma fin_mem_lcosets_of_mem_subg (Psub : H ⊆ G) (g : A) : g ∈ G → g ∈ Union G (fin_lcoset H) :=
-       assume PinG,
-       have Pincoset : ∃ x, x ∈ G ∧ g ∈ (fin_lcoset H x), from exists.intro g (and.intro PinG (fin_mem_lcoset g)),
-       iff.elim_right (mem_Union_iff G (fin_lcoset H) _) Pincoset
-lemma fin_mem_subg_of_mem_lcosets (Psub : H ⊆ G) (g : A) : g ∈ Union G (fin_lcoset H) → g ∈ G :=
-      assume Punion,
-      have Pincoset : ∃ x, x ∈ G ∧ g ∈ (fin_lcoset H x), from iff.elim_left (mem_Union_iff G (fin_lcoset H) _) Punion,
-      obtain g Pg, from Pincoset,
-      fin_mem_lcoset_mem_subg Psub (and.left Pg) (and.right Pg)
-lemma fin_subg_eq_union_lcosets (Psub : H ⊆ G) : G = Union (fin_lcosets H G) id := calc
-      G = Union G (fin_lcoset H) : ext (take g, iff.intro (fin_mem_lcosets_of_mem_subg Psub g) (fin_mem_subg_of_mem_lcosets Psub g))
-      ... = Union (fin_lcosets H G) id : image_eq_Union_index_image
-lemma fin_lcoset_disjoint (a1 a2 : finset A) (Pa1 : a1 ∈ fin_lcosets H G) (Pa2 : a2 ∈ fin_lcosets H G) : a1 ≠ a2 → a1 ∩ a2 = ∅ :=
-      assume Pne,
-      assert Pe1 : _, from exists_of_mem_image Pa1, obtain g1 Pg1, from Pe1,
-      assert Pe2 : _, from exists_of_mem_image Pa2, obtain g2 Pg2, from Pe2,
-      begin
-      apply inter_eq_empty_of_disjoint,
-      apply disjoint.intro,
-      rewrite [eq.symm (and.right Pg1), eq.symm (and.right Pg2)],
-      intro x,
-      rewrite [*fin_lcoset_same],
-      intro Pxg1, rewrite [Pxg1, and.right Pg1, and.right Pg2],
-      intro Pe, exact absurd Pe Pne
-      end
+definition fin_lcoset_partition_subg (Psub : H ⊆ G) :=
+      partition.mk G (fin_lcoset H) fin_lcoset_same
+        (restriction_imp_union (fin_lcoset H) fin_lcoset_same (fin_lcoset_subset Psub))
 
 open nat
 
 theorem lagrange_theorem (Psub : H ⊆ G) : card G = card (fin_lcosets H G) * card H := calc
-        card G = card (Union (fin_lcosets H G) id) : fin_subg_eq_union_lcosets Psub
-        ... = nat.Sum (fin_lcosets H G) card : card_Union_of_disjoint _ id fin_lcoset_disjoint
+        card G = nat.Sum (fin_lcosets H G) card : class_equation (fin_lcoset_partition_subg Psub)
         ... = nat.Sum (fin_lcosets H G) (λ x, card H) : nat.Sum_ext (take g P, fin_lcosets_card_eq g P)
         ... = card (fin_lcosets H G) * card H : Sum_const_eq_card_mul
 
