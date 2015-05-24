@@ -199,6 +199,80 @@ end eqv
 end finset
 
 namespace list
+
+variables {A B : Type}
+lemma not_mem_cons_of_ne_and_not_mem {x y : A} {l : list A} : x ≠ y ∧ x ∉ l → x ∉ y::l :=
+      assume P, not.intro (assume Pxin,
+        absurd (eq_or_mem_of_mem_cons Pxin) (not_or (and.left P) (and.right P)))
+lemma ne_and_not_mem_of_not_mem_cons {x y : A} {l : list A} : x ∉ y::l → x ≠ y ∧ x ∉ l :=
+      assume P, and.intro (not_eq_of_not_mem P) (not_mem_of_not_mem P)
+
+definition dinj (p : A → Prop) (f : Π a, p a → B) := ∀ ⦃a1 a2⦄ (h1 : p a1) (h2 : p a2), a1 ≠ a2 → (f a1 h1) ≠ (f a2 h2)
+
+definition dmap (p : A → Prop) [h : decidable_pred p] (f : Π a, p a → B) : list A → list B
+| []       := []
+| (a::l)   := if P : (p a) then cons (f a P) (dmap l) else (dmap l)
+
+lemma dmap_nil {p : A → Prop} [h : decidable_pred p] {f : Π a, p a → B} : dmap p f [] = [] := rfl
+lemma dmap_cons_of_pos {p : A → Prop} [h : decidable_pred p] {f : Π a, p a → B} {a : A} (P : p a) : ∀ l, dmap p f (a::l) = (f a P) :: dmap p f l :=
+      λ l, dif_pos P
+lemma dmap_cons_of_neg {p : A → Prop} [h : decidable_pred p] {f : Π a, p a → B} {a : A} (P : ¬ p a) : ∀ l, dmap p f (a::l) = dmap p f l :=
+      λ l, dif_neg P
+
+lemma mem_of_dmap {p : A → Prop} [h : decidable_pred p] {f : Π a, p a → B} : ∀ (l : list A) {a} (Pa : p a), a ∈ l → (f a Pa) ∈ dmap p f l
+| []              := take a Pa Pinnil, by contradiction
+| (a::l)          := take b Pb Pbin, or.elim (eq_or_mem_of_mem_cons Pbin)
+                     (assume Pbeqa, begin
+                       rewrite [eq.symm Pbeqa, dmap_cons_of_pos Pb],
+                       exact !mem_cons
+                     end)
+                     (assume Pbinl,
+                       decidable.rec_on (h a)
+                       (assume Pa, begin
+                         rewrite [dmap_cons_of_pos Pa],
+                         apply mem_cons_of_mem,
+                         exact mem_of_dmap l Pb Pbinl
+                       end)
+                       (assume nPa, begin
+                         rewrite [dmap_cons_of_neg nPa],
+                         exact mem_of_dmap l Pb Pbinl
+                       end))
+      
+lemma dinj_not_mem_of_dmap {p : A → Prop} [h : decidable_pred p] (f : Π a, p a → B) (Pdi : dinj p f) : ∀ {l : list A} {a} (Pa : p a), a ∉ l → (f a Pa) ∉ dmap p f l
+| []           := take b Pb Pbnin, !not_mem_nil
+| (a::l)       := take b Pb Pbnin,
+                  assert Pand : b ≠ a ∧ b ∉ l, from ne_and_not_mem_of_not_mem_cons Pbnin,
+                  decidable.rec_on (h a)
+                  (λ Pa, begin
+                    rewrite [dmap_cons_of_pos Pa],
+                    apply not_mem_cons_of_ne_and_not_mem,
+                    apply and.intro,
+                      exact Pdi Pb Pa (and.left Pand),
+                      exact dinj_not_mem_of_dmap Pb (and.right Pand)
+                  end) 
+                  (λ nPa, begin
+                     rewrite [dmap_cons_of_neg nPa],
+                     exact dinj_not_mem_of_dmap Pb (and.right Pand)
+                  end)
+
+lemma dmap_nodup_of_dinj {p : A → Prop} [h : decidable_pred p] {f : Π a, p a → B} (Pdi : dinj p f): ∀ {l : list A}, nodup l → nodup (dmap p f l)
+| []                 := take P, nodup.ndnil
+| (a::l)             := take Pnodup,
+                        decidable.rec_on (h a)
+                        (λ Pa, begin
+                          rewrite [dmap_cons_of_pos Pa],
+                          apply nodup_cons,
+                            apply (dinj_not_mem_of_dmap f Pdi Pa),
+                            exact not_mem_of_nodup_cons Pnodup,
+                            exact dmap_nodup_of_dinj (nodup_of_nodup_cons Pnodup)
+                        end)
+                        (λ nPa, begin
+                          rewrite [dmap_cons_of_neg nPa],
+                          exact dmap_nodup_of_dinj (nodup_of_nodup_cons Pnodup)
+                        end)
+end list
+
+namespace list
 section nodup
 open function
 variables {A B : Type}
