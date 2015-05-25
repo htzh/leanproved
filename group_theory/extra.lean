@@ -48,8 +48,9 @@ end set
 namespace function
 section
 open set eq.ops
+
 variables {A B C : Type}
-definition bijective (f : A → B) := injective f ∧ surjective f
+
 lemma injective_eq_inj_on_univ {f : A → B} : injective f = inj_on f univ :=
   begin
     esimp [injective, inj_on, univ, mem],
@@ -76,7 +77,10 @@ lemma surjective_eq_surj_on_univ {f : A → B} : surjective f = surj_on f univ u
 
 theorem surjective_compose {g : B → C} {f : A → B} (Hg : surjective g) (Hf : surjective f) : surjective (g ∘ f) :=
         eq.symm surjective_eq_surj_on_univ ▸ surj_on_compose (surjective_eq_surj_on_univ ▸ Hg) (surjective_eq_surj_on_univ ▸ Hf)
-        
+
+-- classical definition of bijective, not requiring an inv
+definition bijective (f : A → B) := injective f ∧ surjective f
+
 lemma bijective_eq_bij_on_univ {f : A → B} : bijective f = bij_on f univ univ :=
       assert P : maps_to f univ univ, from univ_maps_to_univ, by
       rewrite [↑bijective, ↑bij_on, injective_eq_inj_on_univ, surjective_eq_surj_on_univ, and_discharge_left P]
@@ -315,21 +319,37 @@ variables {A B : Type}
 end nodup
 end list
 
+namespace finset
+open eq.ops nat
+
+-- general version of pigeon hole for finsets. we can specialize it to fintype univ.
+-- note the classical property of inj is split between inj_on and maps_to, which we
+-- replace with image subset instead
+lemma card_le_of_inj {A : Type} [deceqA : decidable_eq A]
+                     {B : Type} [deceqB : decidable_eq B]
+                     (a : finset A) (b : finset B)
+                   : (∃ f : A → B, set.inj_on f (ts a) ∧ (image f a ⊆ b)) → card a ≤ card b :=
+      assume Pex, obtain f Pinj, from Pex,
+      assert Psub : _, from and.right Pinj,
+      assert Ple : card (image f a) ≤ card b, from card_le_card_of_subset Psub,
+      by rewrite [(card_image_eq_of_inj_on (and.left Pinj))⁻¹]; exact Ple
+
+end finset
+
 namespace fintype
 open eq.ops nat function list finset
 
 definition card [reducible] (A : Type) [finA : fintype A] := finset.card (@finset.univ A _)
 
 -- general version of pigeon hole principle. we will specialize it to less_than type later
-lemma card_le_of_inj (A : Type) [finA : fintype A] [deceqB : decidable_eq A]
+lemma card_le_of_inj (A : Type) [finA : fintype A] [deceqA : decidable_eq A]
                      (B : Type) [finB : fintype B] [deceqB : decidable_eq B]
                    : (∃ f : A → B, injective f) → card A ≤ card B :=
       assume Pex, obtain f Pinj, from Pex,
       assert Pinj_on_univ : _, from injective_eq_inj_on_univ ▸ Pinj,
       assert Pinj_ts : _, from to_set_univ⁻¹ ▸ Pinj_on_univ,
       assert Psub : (image f univ) ⊆ univ, from !subset_univ,
-      assert Ple : finset.card (image f univ) ≤ finset.card (univ), from card_le_card_of_subset Psub,
-      by rewrite [(card_image_eq_of_inj_on Pinj_ts)⁻¹]; exact Ple
+      finset.card_le_of_inj univ univ (exists.intro f (and.intro Pinj_ts Psub))
 
 -- this theory is developed so it would be easier to establish permutations on finite
 -- types. In general we could hypothesize a finset of card n but since all Sn groups are

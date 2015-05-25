@@ -57,7 +57,7 @@ lemma ker.has_inv (Hom : is_hom f) : subgroup.has_inv (ker f) :=
       take a, assume Pa : f a = 1, calc
       f a⁻¹ = (f a)⁻¹ : by rewrite (hom_map_inv f Hom)
       ... = 1⁻¹ : by rewrite Pa
-      ... = 1 : by rewrite inv_one
+      ... = 1 : by rewrite one_inv
 lemma ker.mul_closed (Hom : is_hom f) : mul_closed_on (ker f) :=
       take x y, assume (Px : f x = 1) (Py : f y = 1), calc
       f (x*y) = (f x) * (f y) : by rewrite Hom

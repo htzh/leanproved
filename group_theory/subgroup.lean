@@ -87,10 +87,10 @@ lemma conj_compose (f g a : A) : f ∘c g ∘c a = f*g ∘c a :=
       ... = f * (g * a) * g⁻¹ * f⁻¹ : mul.assoc
       ... = f * g * a * g⁻¹ * f⁻¹ : mul.assoc
       ... = f * g * a * (g⁻¹ * f⁻¹) : mul.assoc
-      ... = f * g * a * (f * g)⁻¹ : inv_mul
+      ... = f * g * a * (f * g)⁻¹ : mul_inv
 lemma conj_id (a : A) : 1 ∘c a = a :=
       calc 1 * a * 1⁻¹ = a * 1⁻¹ : one_mul
-      ... = a * 1 : inv_one
+      ... = a * 1 : one_inv
       ... = a : mul_one
 lemma conj_one (g : A) : g ∘c 1 = 1 :=
       calc g * 1 * g⁻¹ = g * g⁻¹ : mul_one
@@ -166,11 +166,11 @@ lemma grcoset_compose (a b : A) (H : set A) : H <∘ a <∘ b = H <∘ a*b :=
 lemma glcoset_id (H : set A) : 1 ∘> H = H :=
       funext (assume x,
         calc (1 ∘> H) x = H (1⁻¹*x) : rfl
-        ... = H (1*x) : {inv_one}
+        ... = H (1*x) : {one_inv}
         ... = H x : {one_mul x})
 lemma grcoset_id (H : set A) : H <∘ 1 = H :=
       funext (assume x,
-        calc H (x*1⁻¹) = H (x*1) : {inv_one}
+        calc H (x*1⁻¹) = H (x*1) : {one_inv}
         ... = H x : {mul_one x})
 --lemma glcoset_inv a (H : set A) : a⁻¹ ∘> a ∘> H = H :=
 --      funext (assume x,
