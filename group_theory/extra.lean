@@ -228,13 +228,21 @@ definition dmap (p : A → Prop) [h : decidable_pred p] (f : Π a, p a → B) : 
 | []       := []
 | (a::l)   := if P : (p a) then cons (f a P) (dmap l) else (dmap l)
 
-lemma dmap_nil {p : A → Prop} [h : decidable_pred p] {f : Π a, p a → B} : dmap p f [] = [] := rfl
-lemma dmap_cons_of_pos {p : A → Prop} [h : decidable_pred p] {f : Π a, p a → B} {a : A} (P : p a) : ∀ l, dmap p f (a::l) = (f a P) :: dmap p f l :=
+-- properties of dmap
+section dmap
+
+variable {p : A → Prop}
+variable [h : decidable_pred p]
+include h
+variable {f : Π a, p a → B}
+
+lemma dmap_nil : dmap p f [] = [] := rfl
+lemma dmap_cons_of_pos {a : A} (P : p a) : ∀ l, dmap p f (a::l) = (f a P) :: dmap p f l :=
       λ l, dif_pos P
-lemma dmap_cons_of_neg {p : A → Prop} [h : decidable_pred p] {f : Π a, p a → B} {a : A} (P : ¬ p a) : ∀ l, dmap p f (a::l) = dmap p f l :=
+lemma dmap_cons_of_neg {a : A} (P : ¬ p a) : ∀ l, dmap p f (a::l) = dmap p f l :=
       λ l, dif_neg P
 
-lemma mem_of_dmap {p : A → Prop} [h : decidable_pred p] {f : Π a, p a → B} : ∀ {l : list A} {a} (Pa : p a), a ∈ l → (f a Pa) ∈ dmap p f l
+lemma mem_of_dmap : ∀ {l : list A} {a} (Pa : p a), a ∈ l → (f a Pa) ∈ dmap p f l
 | []              := take a Pa Pinnil, by contradiction
 | (a::l)          := take b Pb Pbin, or.elim (eq_or_mem_of_mem_cons Pbin)
                      (assume Pbeqa, begin
@@ -253,8 +261,7 @@ lemma mem_of_dmap {p : A → Prop} [h : decidable_pred p] {f : Π a, p a → B} 
                          exact mem_of_dmap Pb Pbinl
                        end))
 
-lemma map_of_dmap_inv_pos {p : A → Prop} [h : decidable_pred p]
-                          {f : Π a, p a → B} {g : B → A} (Pinv : ∀ a (Pa : p a), g (f a Pa) = a) :
+lemma map_of_dmap_inv_pos {g : B → A} (Pinv : ∀ a (Pa : p a), g (f a Pa) = a) :
                           ∀ {l : list A} (Pl : ∀ ⦃a⦄, a ∈ l → p a), map g (dmap p f l) = l
 | []                      := assume Pl, by rewrite [dmap_nil, map_nil]
 | (a::l)                  := assume Pal,
@@ -263,7 +270,7 @@ lemma map_of_dmap_inv_pos {p : A → Prop} [h : decidable_pred p]
                             from take x Pxin, Pal x (mem_cons_of_mem a Pxin),
                           by rewrite [dmap_cons_of_pos Pa, map_cons, Pinv, map_of_dmap_inv_pos Pl]
 
-lemma dinj_not_mem_of_dmap {p : A → Prop} [h : decidable_pred p] (f : Π a, p a → B) (Pdi : dinj p f) : ∀ {l : list A} {a} (Pa : p a), a ∉ l → (f a Pa) ∉ dmap p f l
+lemma dinj_not_mem_of_dmap (Pdi : dinj p f) : ∀ {l : list A} {a} (Pa : p a), a ∉ l → (f a Pa) ∉ dmap p f l
 | []           := take b Pb Pbnin, !not_mem_nil
 | (a::l)       := take b Pb Pbnin,
                   assert Pand : b ≠ a ∧ b ∉ l, from ne_and_not_mem_of_not_mem_cons Pbnin,
@@ -280,14 +287,14 @@ lemma dinj_not_mem_of_dmap {p : A → Prop} [h : decidable_pred p] (f : Π a, p 
                      exact dinj_not_mem_of_dmap Pb (and.right Pand)
                   end)
 
-lemma dmap_nodup_of_dinj {p : A → Prop} [h : decidable_pred p] {f : Π a, p a → B} (Pdi : dinj p f): ∀ {l : list A}, nodup l → nodup (dmap p f l)
+lemma dmap_nodup_of_dinj (Pdi : dinj p f): ∀ {l : list A}, nodup l → nodup (dmap p f l)
 | []                 := take P, nodup.ndnil
 | (a::l)             := take Pnodup,
                         decidable.rec_on (h a)
                         (λ Pa, begin
                           rewrite [dmap_cons_of_pos Pa],
                           apply nodup_cons,
-                            apply (dinj_not_mem_of_dmap f Pdi Pa),
+                            apply (dinj_not_mem_of_dmap Pdi Pa),
                             exact not_mem_of_nodup_cons Pnodup,
                             exact dmap_nodup_of_dinj (nodup_of_nodup_cons Pnodup)
                         end)
@@ -295,6 +302,8 @@ lemma dmap_nodup_of_dinj {p : A → Prop} [h : decidable_pred p] {f : Π a, p a 
                           rewrite [dmap_cons_of_neg nPa],
                           exact dmap_nodup_of_dinj (nodup_of_nodup_cons Pnodup)
                         end)
+end dmap
+
 end list
 
 namespace list
@@ -346,53 +355,53 @@ lemma lt_dinj (n : nat) : dinj (λ i, i < n) less_than.mk :=
 
 lemma lt_inv (n i : nat) (Plt : i < n) : less_than.i (less_than.mk i Plt) = i := rfl
 
-definition lt_list [reducible] (n : nat) : list (less_than n) :=
-           dmap (λ i, i < n) less_than.mk (upto n)
+definition upto [reducible] (n : nat) : list (less_than n) :=
+           dmap (λ i, i < n) less_than.mk (list.upto n)
 
-lemma lt_list_nodup (n : nat) : nodup (lt_list n) :=
-                    dmap_nodup_of_dinj (lt_dinj n) (nodup_upto n)
+lemma upto_nodup (n : nat) : nodup (upto n) :=
+                    dmap_nodup_of_dinj (lt_dinj n) (list.nodup_upto n)
 
 check @less_than.mk
 
-lemma lt_list_complete (n : nat) : ∀ (i : less_than n), i ∈ lt_list n :=
+lemma upto_complete (n : nat) : ∀ (i : less_than n), i ∈ upto n :=
       take i, less_than.destruct i (
         take ival Piltn,
-          assert Pin : ival ∈ upto n, from mem_upto_of_lt Piltn,
+          assert Pin : ival ∈ list.upto n, from mem_upto_of_lt Piltn,
           mem_of_dmap Piltn Pin)
 
-lemma lt_list_nil : lt_list 0 = [] :=
-      by rewrite [↑lt_list, upto_nil, dmap_nil]
+lemma upto_nil : upto 0 = [] :=
+      by rewrite [↑upto, list.upto_nil, dmap_nil]
 
-lemma lt_list_map_eq_upto (n : nat) : map less_than.i (lt_list n) = upto n :=
+lemma upto_map_eq_upto (n : nat) : map less_than.i (upto n) = list.upto n :=
       map_of_dmap_inv_pos (lt_inv n) (@lt_of_mem_upto n)
 
-lemma lt_list_length (n : nat) : length (lt_list n) = n := calc
-      length (lt_list n) = length (upto n) : (lt_list_map_eq_upto n ▸ len_map less_than.i (lt_list n))⁻¹
-      ... = n : length_upto n
+lemma upto_length (n : nat) : length (upto n) = n := calc
+      length (upto n) = length (list.upto n) : (upto_map_eq_upto n ▸ len_map less_than.i (upto n))⁻¹
+      ... = n : list.length_upto n
 
 definition fin_lt_type [instance] (n : nat) : fintype (less_than n) :=
-           fintype.mk (lt_list n) (lt_list_nodup n) (lt_list_complete n)
+           fintype.mk (upto n) (upto_nodup n) (upto_complete n)
 
 local attribute less_than.i [coercion]
 
--- alternative definitions of lt_list not needed for anything
+-- alternative definitions of upto not needed for anything
 definition lt_collect (n : nat) (l : list (less_than n)) (i : nat) :=
            if H : (i < n) then cons (less_than.mk i H) l else l
 
-definition lt_list₁ (n : nat) : list (less_than n) :=
-           foldl (lt_collect n) [] (upto n)
+definition upto₁ (n : nat) : list (less_than n) :=
+           foldl (lt_collect n) [] (list.upto n)
 
 definition lt_cons (n : nat) (i : nat) (l : list (less_than n)) : list (less_than n) :=
            if H : (i < n) then cons (less_than.mk i H) l else l
 
-definition lt_list₂ (n : nat) : list (less_than n) :=
-           foldr (lt_cons n) [] (upto n)
+definition upto₂ (n : nat) : list (less_than n) :=
+           foldr (lt_cons n) [] (list.upto n)
 
 section pigeon_hole
 
 variable {n : nat}
 
-lemma card_univ_lt_type : card (less_than n) = n := lt_list_length n
+lemma card_univ_lt_type : card (less_than n) = n := upto_length n
 
 variable {m : nat}
 
