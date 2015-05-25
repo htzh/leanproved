@@ -357,7 +357,7 @@ lemma card_le_of_inj (A : Type) [finA : fintype A] [deceqA : decidable_eq A]
 -- we now conflate the object with the index we may be able to make the construction of
 -- the inverse simpler, but that remains to be seen.
 structure less_than (n : nat) :=
-          (i : nat) (lt : i < n)
+          (val : nat) (lt : val < n)
 
 definition less_than.has_decidable_eq [instance] (n : nat) : decidable_eq (less_than n) :=
            take i j,
@@ -373,7 +373,7 @@ lemma lt_dinj (n : nat) : dinj (λ i, i < n) less_than.mk :=
         (assume Pelt, less_than.no_confusion Pelt
           (assume Pe, absurd Pe Pne))
 
-lemma lt_inv (n i : nat) (Plt : i < n) : less_than.i (less_than.mk i Plt) = i := rfl
+lemma lt_inv (n i : nat) (Plt : i < n) : less_than.val (less_than.mk i Plt) = i := rfl
 
 definition upto [reducible] (n : nat) : list (less_than n) :=
            dmap (λ i, i < n) less_than.mk (list.upto n)
@@ -392,17 +392,17 @@ lemma upto_complete (n : nat) : ∀ (i : less_than n), i ∈ upto n :=
 lemma upto_nil : upto 0 = [] :=
       by rewrite [↑upto, list.upto_nil, dmap_nil]
 
-lemma upto_map_eq_upto (n : nat) : map less_than.i (upto n) = list.upto n :=
+lemma upto_map_eq_upto (n : nat) : map less_than.val (upto n) = list.upto n :=
       map_of_dmap_inv_pos (lt_inv n) (@lt_of_mem_upto n)
 
 lemma upto_length (n : nat) : length (upto n) = n := calc
-      length (upto n) = length (list.upto n) : (upto_map_eq_upto n ▸ len_map less_than.i (upto n))⁻¹
+      length (upto n) = length (list.upto n) : (upto_map_eq_upto n ▸ len_map less_than.val (upto n))⁻¹
       ... = n : list.length_upto n
 
 definition fin_lt_type [instance] (n : nat) : fintype (less_than n) :=
            fintype.mk (upto n) (upto_nodup n) (upto_complete n)
 
-local attribute less_than.i [coercion]
+local attribute less_than.val [coercion]
 
 -- alternative definitions of upto not needed for anything
 definition lt_collect (n : nat) (l : list (less_than n)) (i : nat) :=
