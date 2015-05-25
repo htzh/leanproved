@@ -16,6 +16,9 @@ theorem and_discharge_left {a b : Prop} : a → (a ∧ b) = b :=
                                       (assume Pb, and.intro Pa Pb))
 definition swap {A B C : Type} (f : A → B → C) : B → A → C := λ x y, f y x
 
+namespace nat
+end nat
+
 namespace set
 section
 open function
@@ -111,7 +114,10 @@ end group
 end algebra
 
 namespace finset
+
+-- more development of theory of finset
 section image
+
 open function
 variables {A B : Type}
 variables [deceqA : decidable_eq A] [deceqB : decidable_eq B]
@@ -143,7 +149,9 @@ lemma image_eq_Union_index_image (s : finset A) (f : A → finset B) : Union s f
 
 end image
 
+-- theory of equivalent classes developed especially for counting purposes
 section eqv
+
 open function
 open eq.ops
 
@@ -201,12 +209,19 @@ end finset
 namespace list
 
 variables {A B : Type}
+-- missing in list/basic
 lemma not_mem_cons_of_ne_and_not_mem {x y : A} {l : list A} : x ≠ y ∧ x ∉ l → x ∉ y::l :=
       assume P, not.intro (assume Pxin,
         absurd (eq_or_mem_of_mem_cons Pxin) (not_or (and.left P) (and.right P)))
 lemma ne_and_not_mem_of_not_mem_cons {x y : A} {l : list A} : x ∉ y::l → x ≠ y ∧ x ∉ l :=
       assume P, and.intro (not_eq_of_not_mem P) (not_mem_of_not_mem P)
 
+-- missing in list/comb
+/-lemma for_all_of_all {p : A → Prop} : ∀ {l}, all l p → (∀a, a ∈ l → p a)
+| []     H := take a Painnil, by contradiction
+| (a::l) H := begin rewrite all_cons_eq at H, end-/
+
+-- new for list/comb dependent map theory
 definition dinj (p : A → Prop) (f : Π a, p a → B) := ∀ ⦃a1 a2⦄ (h1 : p a1) (h2 : p a2), a1 ≠ a2 → (f a1 h1) ≠ (f a2 h2)
 
 definition dmap (p : A → Prop) [h : decidable_pred p] (f : Π a, p a → B) : list A → list B
@@ -219,7 +234,7 @@ lemma dmap_cons_of_pos {p : A → Prop} [h : decidable_pred p] {f : Π a, p a �
 lemma dmap_cons_of_neg {p : A → Prop} [h : decidable_pred p] {f : Π a, p a → B} {a : A} (P : ¬ p a) : ∀ l, dmap p f (a::l) = dmap p f l :=
       λ l, dif_neg P
 
-lemma mem_of_dmap {p : A → Prop} [h : decidable_pred p] {f : Π a, p a → B} : ∀ (l : list A) {a} (Pa : p a), a ∈ l → (f a Pa) ∈ dmap p f l
+lemma mem_of_dmap {p : A → Prop} [h : decidable_pred p] {f : Π a, p a → B} : ∀ {l : list A} {a} (Pa : p a), a ∈ l → (f a Pa) ∈ dmap p f l
 | []              := take a Pa Pinnil, by contradiction
 | (a::l)          := take b Pb Pbin, or.elim (eq_or_mem_of_mem_cons Pbin)
                      (assume Pbeqa, begin
@@ -231,13 +246,23 @@ lemma mem_of_dmap {p : A → Prop} [h : decidable_pred p] {f : Π a, p a → B} 
                        (assume Pa, begin
                          rewrite [dmap_cons_of_pos Pa],
                          apply mem_cons_of_mem,
-                         exact mem_of_dmap l Pb Pbinl
+                         exact mem_of_dmap Pb Pbinl
                        end)
                        (assume nPa, begin
                          rewrite [dmap_cons_of_neg nPa],
-                         exact mem_of_dmap l Pb Pbinl
+                         exact mem_of_dmap Pb Pbinl
                        end))
-      
+
+lemma map_of_dmap_inv_pos {p : A → Prop} [h : decidable_pred p]
+                          {f : Π a, p a → B} {g : B → A} (Pinv : ∀ a (Pa : p a), g (f a Pa) = a) :
+                          ∀ {l : list A} (Pl : ∀ ⦃a⦄, a ∈ l → p a), map g (dmap p f l) = l
+| []                      := assume Pl, by rewrite [dmap_nil, map_nil]
+| (a::l)                  := assume Pal,
+                          assert Pa : p a, from Pal a !mem_cons,
+                          assert Pl : ∀ a, a ∈ l → p a,
+                            from take x Pxin, Pal x (mem_cons_of_mem a Pxin),
+                          by rewrite [dmap_cons_of_pos Pa, map_cons, Pinv, map_of_dmap_inv_pos Pl]
+
 lemma dinj_not_mem_of_dmap {p : A → Prop} [h : decidable_pred p] (f : Π a, p a → B) (Pdi : dinj p f) : ∀ {l : list A} {a} (Pa : p a), a ∉ l → (f a Pa) ∉ dmap p f l
 | []           := take b Pb Pbnin, !not_mem_nil
 | (a::l)       := take b Pb Pbnin,
@@ -280,3 +305,104 @@ variables {A B : Type}
   
 end nodup
 end list
+
+namespace fintype
+open eq.ops nat function list finset
+
+definition card [reducible] (A : Type) [finA : fintype A] := finset.card (@finset.univ A _)
+
+-- general version of pigeon hole principle. we will specialize it to less_than type later
+lemma card_le_of_inj (A : Type) [finA : fintype A] [deceqB : decidable_eq A]
+                     (B : Type) [finB : fintype B] [deceqB : decidable_eq B]
+                   : (∃ f : A → B, injective f) → card A ≤ card B :=
+      assume Pex, obtain f Pinj, from Pex,
+      assert Pinj_on_univ : _, from injective_eq_inj_on_univ ▸ Pinj,
+      assert Pinj_ts : _, from to_set_univ⁻¹ ▸ Pinj_on_univ,
+      assert Psub : (image f univ) ⊆ univ, from !subset_univ,
+      assert Ple : finset.card (image f univ) ≤ finset.card (univ), from card_le_card_of_subset Psub,
+      by rewrite [(card_image_eq_of_inj_on Pinj_ts)⁻¹]; exact Ple
+
+-- this theory is developed so it would be easier to establish permutations on finite
+-- types. In general we could hypothesize a finset of card n but since all Sn groups are
+-- isomorphic there is no reason not to use a concrete list of nats. Especially since
+-- we now conflate the object with the index we may be able to make the construction of
+-- the inverse simpler, but that remains to be seen.
+structure less_than (n : nat) :=
+          (i : nat) (lt : i < n)
+
+definition less_than.has_decidable_eq [instance] (n : nat) : decidable_eq (less_than n) :=
+           take i j,
+           less_than.destruct i (λ ival iltn, less_than.destruct j (λ jval jltn,
+             decidable.rec_on (nat.has_decidable_eq ival jval)
+               (assume Pe, decidable.inl (dcongr_arg2 less_than.mk Pe !proof_irrel))
+               (assume Pne, decidable.inr (not.intro
+                 (assume Pmkeq, less_than.no_confusion Pmkeq
+                   (assume Pe, absurd Pe Pne))))))
+
+lemma lt_dinj (n : nat) : dinj (λ i, i < n) less_than.mk :=
+      take a1 a2 Pa1 Pa2 Pne, not.intro
+        (assume Pelt, less_than.no_confusion Pelt
+          (assume Pe, absurd Pe Pne))
+
+lemma lt_inv (n i : nat) (Plt : i < n) : less_than.i (less_than.mk i Plt) = i := rfl
+
+definition lt_list [reducible] (n : nat) : list (less_than n) :=
+           dmap (λ i, i < n) less_than.mk (upto n)
+
+lemma lt_list_nodup (n : nat) : nodup (lt_list n) :=
+                    dmap_nodup_of_dinj (lt_dinj n) (nodup_upto n)
+
+check @less_than.mk
+
+lemma lt_list_complete (n : nat) : ∀ (i : less_than n), i ∈ lt_list n :=
+      take i, less_than.destruct i (
+        take ival Piltn,
+          assert Pin : ival ∈ upto n, from mem_upto_of_lt Piltn,
+          mem_of_dmap Piltn Pin)
+
+lemma lt_list_nil : lt_list 0 = [] :=
+      by rewrite [↑lt_list, upto_nil, dmap_nil]
+
+lemma lt_list_map_eq_upto (n : nat) : map less_than.i (lt_list n) = upto n :=
+      map_of_dmap_inv_pos (lt_inv n) (@lt_of_mem_upto n)
+
+lemma lt_list_length (n : nat) : length (lt_list n) = n := calc
+      length (lt_list n) = length (upto n) : (lt_list_map_eq_upto n ▸ len_map less_than.i (lt_list n))⁻¹
+      ... = n : length_upto n
+
+definition fin_lt_type [instance] (n : nat) : fintype (less_than n) :=
+           fintype.mk (lt_list n) (lt_list_nodup n) (lt_list_complete n)
+
+local attribute less_than.i [coercion]
+
+-- alternative definitions of lt_list not needed for anything
+definition lt_collect (n : nat) (l : list (less_than n)) (i : nat) :=
+           if H : (i < n) then cons (less_than.mk i H) l else l
+
+definition lt_list₁ (n : nat) : list (less_than n) :=
+           foldl (lt_collect n) [] (upto n)
+
+definition lt_cons (n : nat) (i : nat) (l : list (less_than n)) : list (less_than n) :=
+           if H : (i < n) then cons (less_than.mk i H) l else l
+
+definition lt_list₂ (n : nat) : list (less_than n) :=
+           foldr (lt_cons n) [] (upto n)
+
+section pigeon_hole
+
+variable {n : nat}
+
+lemma card_univ_lt_type : card (less_than n) = n := lt_list_length n
+
+variable {m : nat}
+
+theorem pigeon_hole : m < n → ¬ (∃ f : less_than n → less_than m, injective f) :=
+        assume Pmltn, not.intro
+          (assume Pex, absurd Pmltn (not_lt_of_le (calc
+            n = card (less_than n) : card_univ_lt_type
+            ... ≤ card (less_than m) : card_le_of_inj (less_than n) (less_than m) Pex
+            ... = m : card_univ_lt_type)))
+
+end pigeon_hole
+
+end fintype
