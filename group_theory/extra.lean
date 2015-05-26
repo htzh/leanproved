@@ -17,6 +17,10 @@ theorem and_discharge_left {a b : Prop} : a → (a ∧ b) = b :=
 definition swap {A B C : Type} (f : A → B → C) : B → A → C := λ x y, f y x
 
 namespace nat
+-- not sure why these are missing
+lemma not_lt_of_le {a b : nat} : a ≤ b → ¬ b < a :=
+      assume aleb, not.intro (assume blta, lt.irrefl a (lt_of_le_of_lt aleb blta))
+
 end nat
 
 namespace set
