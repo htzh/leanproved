@@ -394,6 +394,13 @@ open eq.ops nat function list finset
 
 definition card [reducible] (A : Type) [finA : fintype A] := finset.card (@finset.univ A _)
 
+lemma card_eq_card_image_of_inj
+      {A : Type} [finA : fintype A] [deceqA : decidable_eq A]
+      {B : Type} [finB : fintype B] [deceqB : decidable_eq B]
+      {f : A → B} : injective f → finset.card (image f univ) = card A :=
+      assume Pinj,
+      card_image_eq_of_inj_on (to_set_univ⁻¹ ▸ injective_eq_inj_on_univ ▸ Pinj)
+
 -- general version of pigeon hole principle. we will specialize it to less_than type later
 lemma card_le_of_inj (A : Type) [finA : fintype A] [deceqA : decidable_eq A]
                      (B : Type) [finB : fintype B] [deceqB : decidable_eq B]

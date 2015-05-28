@@ -1,4 +1,10 @@
-import algebra.group data.set data.fintype .extra
+/-
+Copyright (c) 2015 Haitao Zhang. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+
+Author : Haitao Zhang
+-/
+import algebra.group data .extra
 
 namespace algebra
 namespace group
@@ -29,12 +35,7 @@ variable {A : Type}
 variable [FinA : fintype A]
 include FinA
 
-definition find_inv (f : perm A) : A → A := sorry
-  
-definition perm.inv (f : perm A) : perm A := sorry
-  
 end finperm
-
 
 end group
 end algebra
