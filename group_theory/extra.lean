@@ -15,6 +15,8 @@ theorem and_discharge_left {a b : Prop} : a → (a ∧ b) = b :=
         assume Pa, propext (iff.intro (assume Pab, and.elim_right Pab)
                                       (assume Pb, and.intro Pa Pb))
 definition swap {A B C : Type} (f : A → B → C) : B → A → C := λ x y, f y x
+definition not_imp_not_of_imp {a b : Prop} : (a → b) → ¬b → ¬a :=
+           assume Pimp Pnb Pa, absurd (Pimp Pa) Pnb
 
 namespace nat
 -- not sure why these are missing
@@ -99,6 +101,21 @@ theorem id_is_bij : bijective (@id A) := and.intro id_is_inj id_is_surj
 lemma left_id (f : A → B) : id ∘ f = f := rfl
 lemma right_id (f : A → B) : f ∘ id = f := rfl
 
+lemma left_inv_of_right_inv_of_inj
+      {A : Type} [h : decidable_eq A] {B : Type} {f : A → B} {g : B → A}
+      : injective f → f∘g = id → g∘f = id :=
+      assume Pinj Pright,
+      assert Pid : f∘(g∘f) = f, from calc
+        f∘g∘f = (f∘g)∘f : compose.assoc
+        ... = id∘f : Pright
+        ... = f : left_id,
+      funext (take x, decidable.rec_on (h ((g∘f) x) x)
+      (λ Peq, Peq)
+      (λ Pne,
+      assert Pfneq : (f∘g∘f) x ≠ f x,
+        from not_imp_not_of_imp (Pinj ((g∘f) x) x) Pne,
+      by rewrite Pid at Pfneq; exact absurd rfl Pfneq))
+      
 end
 end function
 

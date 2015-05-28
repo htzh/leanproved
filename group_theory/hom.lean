@@ -5,7 +5,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author : Haitao Zhang
 -/
 import algebra.group data.set .subgroup
-namespace group_hom
+namespace group
 open algebra
 -- ⁻¹ in eq.ops conflicts with group ⁻¹
 -- open eq.ops
@@ -96,6 +96,9 @@ theorem hom_map_subgroup (Hom : is_hom f) : is_subgroup (f '[H]) :=
 
 end
 
+structure hom_class [class] (A B : Type) [s1 : group A] [s2 : group B] : Type :=
+  (hom : A → B) (is_hom : is_hom hom)
+
 section hom_theorem
 check @ker_is_normal_subgroup
 variables {A B : Type}
@@ -103,11 +106,9 @@ variable [s1 : group A]
 variable [s2 : group B]
 include s1
 include s2
-structure hom_class [class] : Type :=
-  (hom : A → B) (is_hom : is_hom hom)
 attribute hom_class.hom [coercion]
 -- need to spell out that f is A to B otherwise it is ambiguous
-variable [f : @hom_class A B _ _]
+variable [f : hom_class A B]
 include f
 -- bridge to lemmas that don't use inference but depend on the Prop directly
 private lemma Hom : is_hom f := @hom_class.is_hom A B s1 s2 _
@@ -158,4 +159,4 @@ theorem first_isomorphism_theorem : is_iso (ker_natural_map : coset_of (ker f) �
   and.intro ker_map_is_inj ker_map_is_hom
 
 end hom_theorem        
-end group_hom
+end group
