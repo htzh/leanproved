@@ -216,6 +216,55 @@ end finset
 
 namespace list
 
+-- useful for inverting function on a finite domain
+section kth
+open nat
+variable {A : Type}
+
+definition kth : ∀ k (l : list A), k < length l → A
+| k []        := begin rewrite length_nil, intro Pltz, exact absurd Pltz !not_lt_zero end
+| 0 (a::l)    := λ P, a
+| (k+1) (a::l):= by rewrite length_cons; intro Plt; exact kth k l (lt_of_succ_lt_succ Plt)
+
+lemma kth_zero_of_cons {a} (l : list A) (P : 0 < length (a::l)) : kth 0 (a::l) P = a :=
+      rfl
+lemma kth_succ_of_cons {a} k (l : list A) (P : k+1 < length (a::l)) : kth (succ k) (a::l) P = kth k l (lt_of_succ_lt_succ P) :=
+      rfl
+  
+variable [deceqA : decidable_eq A]
+include deceqA
+
+-- find_mem can be used to generate a proof of Found if a ∈ l.
+-- "kth (find a l) l Found" can be used to retrieve what is found. While that may seem
+-- silly since we already have what we are looking for in "a",
+-- "let elts := elems A, k := find b (map f elts) in kth k elts Found"
+-- would allow us to use it as a map to reverse a finite function.
+lemma find_le_length : ∀ {a} {l : list A}, find a l ≤ length l
+| a []        := !le.refl
+| a (b::l)    := decidable.rec_on (deceqA a b)
+              (assume Peq, by rewrite [find_cons_of_eq l Peq]; exact !zero_lt_succ)
+              (assume Pne, begin
+              rewrite [find_cons_of_ne l Pne, length_cons],
+              apply succ_lt_succ, apply find_le_length
+              end)
+lemma find_not_mem : ∀ {a} {l : list A}, find a l = length l → a ∉ l
+| a []        := assume Peq, !not_mem_nil
+| a (b::l)    := decidable.rec_on (deceqA a b)
+              (assume Peq, by rewrite [find_cons_of_eq l Peq, length_cons]; contradiction)
+              (assume Pne, begin
+              rewrite [find_cons_of_ne l Pne, length_cons, mem_cons_iff],
+              intro Plen, apply (not_or Pne),
+              exact find_not_mem (succ_inj Plen)
+              end)
+lemma find_mem {a} {l : list A} : a ∈ l → find a l < length l :=
+      assume Pin, begin
+      apply lt_of_le_and_ne,
+        apply find_le_length,
+        apply not.intro, intro Peq,
+        exact absurd Pin (find_not_mem Peq)
+      end
+end kth
+
 variables {A B : Type}
 -- missing in list/basic
 lemma not_mem_cons_of_ne_and_not_mem {x y : A} {l : list A} : x ≠ y ∧ x ∉ l → x ∉ y::l :=
@@ -270,7 +319,7 @@ lemma mem_of_dmap : ∀ {l : list A} {a} (Pa : p a), a ∈ l → (f a Pa) ∈ dm
                        end))
 
 lemma map_of_dmap_inv_pos {g : B → A} (Pinv : ∀ a (Pa : p a), g (f a Pa) = a) :
-                          ∀ {l : list A} (Pl : ∀ ⦃a⦄, a ∈ l → p a), map g (dmap p f l) = l
+                          ∀ {l : list A}, (∀ ⦃a⦄, a ∈ l → p a) → map g (dmap p f l) = l
 | []                      := assume Pl, by rewrite [dmap_nil, map_nil]
 | (a::l)                  := assume Pal,
                           assert Pa : p a, from Pal a !mem_cons,
@@ -371,6 +420,17 @@ definition less_than.has_decidable_eq [instance] (n : nat) : decidable_eq (less_
                (assume Pne, decidable.inr (not.intro
                  (assume Pmkeq, less_than.no_confusion Pmkeq
                    (assume Pe, absurd Pe Pne))))))
+
+namespace less_than
+open decidable
+-- new tactic makes the proof above more succinct
+example (n : nat) : ∀ (i j : less_than n), decidable (i = j)
+| (mk ival ilt) (mk jval jlt) :=
+      match nat.has_decidable_eq ival jval with
+      | inl veq := inl (by substvars)
+      | inr vne := inr (by intro h; injection h; contradiction)
+      end
+end less_than
 
 lemma lt_dinj (n : nat) : dinj (λ i, i < n) less_than.mk :=
       take a1 a2 Pa1 Pa2 Pne, not.intro
