@@ -44,6 +44,9 @@ section perm
 variable {A : Type}
 variable [finA : fintype A]
 include finA
+
+definition move_by [reducible] (a : A) (f : perm A) : A := f a
+
 variable [deceqA : decidable_eq A]
 include deceqA
 
