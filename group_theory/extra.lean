@@ -18,6 +18,15 @@ definition swap {A B C : Type} (f : A → B → C) : B → A → C := λ x y, f 
 definition not_imp_not_of_imp {a b : Prop} : (a → b) → ¬b → ¬a :=
            assume Pimp Pnb Pa, absurd (Pimp Pa) Pnb
 
+section decidable_quantifiers
+lemma forall_of_not_exists_not {A : Type} {p : A → Prop} [h : decidable_pred p]
+      : ¬(∃ x, ¬p x) → ∀ x, p x :=
+      assume Pne, take x, decidable.rec_on (h x)
+      (λ P : p x, P)
+      (λ nP : ¬p x, absurd (exists.intro x nP) Pne)
+
+end decidable_quantifiers
+
 namespace nat
 -- not sure why these are missing
 lemma not_lt_of_le {a b : nat} : a ≤ b → ¬ b < a :=
@@ -409,6 +418,7 @@ end finset
 namespace fintype
 open eq.ops nat function list finset
 
+section card
 definition card [reducible] (A : Type) [finA : fintype A] := finset.card (@finset.univ A _)
 
 lemma card_eq_card_image_of_inj
@@ -427,6 +437,27 @@ lemma card_le_of_inj (A : Type) [finA : fintype A] [deceqA : decidable_eq A]
       assert Pinj_ts : _, from to_set_univ⁻¹ ▸ Pinj_on_univ,
       assert Psub : (image f univ) ⊆ univ, from !subset_univ,
       finset.card_le_of_inj univ univ (exists.intro f (and.intro Pinj_ts Psub))
+
+-- used to prove that inj ∧ eq card => surj
+lemma univ_of_card_eq_univ {A : Type} [finA : fintype A] [deceqA : decidable_eq A]
+                           {s : finset A}
+                         : finset.card s = card A → s = univ :=
+      assume Pcardeq, ext (take a,
+      assert D : decidable (a ∈ s), from decidable_mem a s, begin
+      apply iff.intro,
+        intro ain, apply mem_univ,
+        intro ain, cases D with Pin Pnin,
+          exact Pin,
+          assert Pplus1 : finset.card (insert a s) = finset.card s + 1,
+            exact card_insert_of_not_mem Pnin,
+          rewrite Pcardeq at Pplus1,
+          assert Ple : finset.card (insert a s) ≤ card A,
+            apply card_le_card_of_subset, apply subset_univ,
+          rewrite Pplus1 at Ple,
+          exact absurd (lt_of_succ_lt_succ Ple) !lt.irrefl
+      end)
+
+end card
 
 -- this theory is developed so it would be easier to establish permutations on finite
 -- types. In general we could hypothesize a finset of card n but since all Sn groups are

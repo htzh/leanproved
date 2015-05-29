@@ -8,7 +8,7 @@ import data algebra.group data .extra
 open function
 -- ⁻¹ in eq.ops conflicts with group ⁻¹
 -- open eq.ops
-notation H1 ▸ H2 := eq.subst H1 H2
+local notation H1 ▸ H2 := eq.subst H1 H2
 open set
 local attribute set [reducible]
 
@@ -64,15 +64,18 @@ definition grcoset H (a : A) : set A := λ x, H (x * a⁻¹)
 definition conj_by (g a : A) := g * a * g⁻¹
 definition is_conjugate (a b : A) := ∃ x, conj_by x b = a
 end
+end algebra
 
 namespace group
+open algebra
   namespace ops
     infixr `∘>`:55 := glcoset -- stronger than = (50), weaker than * (70)
     infixl `<∘`:55 := grcoset
     infixr `∘c`:55 := conj_by
   end ops
 end group
-    
+
+namespace algebra    
 open group.ops
 section
 variable {A : Type}
@@ -312,64 +315,6 @@ lemma subg_lcoset_subset_subg (Psub : S ⊆ H) (a : A) : a ∈ H → a ∘> S �
       subgroup_lcoset_id a Pin ▸ P
 
 end subgroup
-
-section lagrange
-open finset
-variable {A : Type}
-variable [deceq : decidable_eq A]
-include deceq
-variable [s : group A]
-include s
-
-definition fin_lcoset (H : finset A) (a : A) := finset.image (lmul_by a) H
-definition fin_lcosets (H G : finset A) := image (fin_lcoset H) G
-
-variable {H : finset A}
-
-lemma fin_lcoset_eq (a : A) : ts (fin_lcoset H a) = a ∘> (ts H) := calc
-      ts (fin_lcoset H a) = coset.l a (ts H) : to_set_image
-      ... = a ∘> (ts H) : glcoset_eq_lcoset
-lemma fin_lcoset_card (a : A) : card (fin_lcoset H a) = card H :=
-      card_image_eq_of_inj_on (lmul_inj_on a (ts H))
-lemma fin_lcosets_card_eq {G : finset A} : ∀ gH, gH ∈ fin_lcosets H G → card gH = card H :=
-      take gH, assume Pcosets, obtain g Pg, from exists_of_mem_image Pcosets,
-      and.right Pg ▸ fin_lcoset_card g
-
-variable [is_subgH : is_subgroup (to_set H)]
-include is_subgH
-
-lemma fin_lcoset_same (x a : A) : x ∈ (fin_lcoset H a) = (fin_lcoset H x = fin_lcoset H a) :=
-      begin
-        rewrite mem_eq_mem_to_set,
-        rewrite [eq_eq_to_set_eq, *(fin_lcoset_eq x), fin_lcoset_eq a],
-        exact (subg_lcoset_same x a)
-      end
-lemma fin_mem_lcoset (g : A) : g ∈ fin_lcoset H g :=
-      have P : g ∈ g ∘> ts H, from and.left (subg_in_coset_refl g),
-      assert P1 : g ∈ ts (fin_lcoset H g), from eq.symm (fin_lcoset_eq g) ▸ P,
-      eq.symm (@mem_eq_mem_to_set _ _ _ g) ▸ P1
-lemma fin_lcoset_subset {S : finset A} (Psub : S ⊆ H) : ∀ x, x ∈ H → fin_lcoset S x ⊆ H :=
-      assert Psubs : set.subset (ts S) (ts H), from subset_eq_to_set_subset S H ▸ Psub,
-      take x, assume Pxs : x ∈ ts H,
-      assert Pcoset : set.subset (x ∘> ts S) (ts H), from subg_lcoset_subset_subg Psubs x Pxs,
-      by rewrite [subset_eq_to_set_subset, fin_lcoset_eq x]; exact Pcoset
-
-variable {G : finset A}
-variable [is_subgG : is_subgroup (to_set G)]
-include is_subgG
-
-definition fin_lcoset_partition_subg (Psub : H ⊆ G) :=
-      partition.mk G (fin_lcoset H) fin_lcoset_same
-        (restriction_imp_union (fin_lcoset H) fin_lcoset_same (fin_lcoset_subset Psub))
-
-open nat
-
-theorem lagrange_theorem (Psub : H ⊆ G) : card G = card (fin_lcosets H G) * card H := calc
-        card G = nat.Sum (fin_lcosets H G) card : class_equation (fin_lcoset_partition_subg Psub)
-        ... = nat.Sum (fin_lcosets H G) (λ x, card H) : nat.Sum_ext (take g P, fin_lcosets_card_eq g P)
-        ... = card (fin_lcosets H G) * card H : Sum_const_eq_card_mul
-
-end lagrange
 
 section normal_subg
 open quot

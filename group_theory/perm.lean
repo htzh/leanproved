@@ -78,16 +78,13 @@ lemma perm.right_inv (p : perm A) : p ^ (perm.inv p) = perm.one :=
       rewrite [-perm_inv_right (perm.inj p)], intros, exact rfl
       end
 
-definition mk_perm_group [instance] : group (perm A) :=
+definition perm_group [instance] : group (perm A) :=
            group.mk perm.mul perm.assoc perm.one perm.one_mul perm.mul_one perm.inv perm.left_inv
-check @mk_perm_group
+check @perm_group
 
 end perm
 
 section less_than
-definition perm_group [instance] {n : nat} : group (perm (less_than n)) :=
-           mk_perm_group
-check @perm_group
 
 end less_than
 end group

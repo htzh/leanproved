@@ -12,7 +12,7 @@ open algebra
 notation H1 ▸ H2 := eq.subst H1 H2
 open set
 open function
-open algebra.group.ops
+open group.ops
 open quot
 local attribute set [reducible]
 

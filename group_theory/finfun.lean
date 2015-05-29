@@ -8,15 +8,6 @@ import data .extra
 
 open nat function list
 
-section decidable_quantifiers
-lemma forall_of_not_exists_not {A : Type} {p : A → Prop} [h : decidable_pred p]
-      : ¬(∃ x, ¬p x) → ∀ x, p x :=
-      assume Pne, take x, decidable.rec_on (h x)
-      (λ P : p x, P)
-      (λ nP : ¬p x, absurd (exists.intro x nP) Pne)
-
-end decidable_quantifiers
-
 namespace fintype
 open eq.ops
 
@@ -77,27 +68,6 @@ lemma id_of_right_inv {f : A → B} (surj : surjective f) : f ∘ (right_inv sur
       funext (λ b, found_of_map b (elems A) (found_of_surj surj b))
 end surj_inv
 
-section card
-open finset
-lemma univ_of_card_eq_univ {A : Type} [finA : fintype A] [deceqA : decidable_eq A]
-                           {s : finset A}
-                         : finset.card s = card A → s = univ :=
-      assume Pcardeq, ext (take a,
-      assert D : decidable (a ∈ s), from decidable_mem a s, begin
-      apply iff.intro,
-        intro ain, apply mem_univ,
-        intro ain, cases D with Pin Pnin,
-          exact Pin,
-          assert Pplus1 : finset.card (insert a s) = finset.card s + 1,
-            exact card_insert_of_not_mem Pnin,
-          rewrite Pcardeq at Pplus1,
-          assert Ple : finset.card (insert a s) ≤ card A,
-            apply card_le_card_of_subset, apply subset_univ,
-          rewrite Pplus1 at Ple,
-          exact absurd (lt_of_succ_lt_succ Ple) !lt.irrefl
-      end)
-
-end card
 -- inj functions for equal card types are also surj and therefore bij
 -- the right inv (since it is surj) is also the left inv
 section inj
