@@ -23,22 +23,34 @@ variable {G : Type}
 variable [ambientG : group G]
 include ambientG
 
+definition finset_mul_closed_on [reducible] (H : finset G) : Prop :=
+           ∀ (x y : G), x ∈ H → y ∈ H → x * y ∈ H
+definition finset_has_inv (H : finset G) : Prop :=
+           ∀ (a : G), a ∈ H → a⁻¹ ∈ H
 structure is_finsubg [class] (H : finset G) : Type :=
           (has_one : 1 ∈ H)
-          (mul_closed : ∀ (x y : G), x ∈ H → y ∈ H → x * y ∈ H)
-          (has_inv : ∀ (a : G), a ∈ H → a⁻¹ ∈ H)
-check @is_finsubg
+          (mul_closed : finset_mul_closed_on H)
+          (has_inv : finset_has_inv H)
+check @is_finsubg 
+
+lemma finsubg_has_one (H : finset G) [h : is_finsubg H] : 1 ∈ H :=
+      @is_finsubg.has_one G _ H h
+lemma finsubg_mul_closed (H : finset G) [h : is_finsubg H] : finset_mul_closed_on H :=
+      @is_finsubg.mul_closed G _ H h
+lemma finsubg_has_inv (H : finset G) [h : is_finsubg H] : finset_has_inv H :=
+      @is_finsubg.has_inv G _ H h
 
 variable [deceqG : decidable_eq G]
 include deceqG
 
-definition finsubg_to_subg [instance] {H : finset G} [h : is_finsubg H] : is_subgroup (ts H) :=
+definition finsubg_to_subg [instance] {H : finset G} [h : is_finsubg H]
+         : is_subgroup (ts H) :=
            is_subgroup.mk
-           (mem_eq_mem_to_set H 1 ▸ @is_finsubg.has_one G _ H h)
+           (mem_eq_mem_to_set H 1 ▸ finsubg_has_one H)
            (take x y, begin repeat rewrite -mem_eq_mem_to_set,
-             exact @is_finsubg.mul_closed G _ H h x y end)
+             apply finsubg_mul_closed H end)
            (take a, begin repeat rewrite -mem_eq_mem_to_set,
-             exact @is_finsubg.has_inv G _ H h a end)
+             apply finsubg_has_inv H end)
 end subg
 
 section lagrange

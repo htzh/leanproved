@@ -5,7 +5,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author : Haitao Zhang
 -/
 import algebra.group data.set .subgroup
+
 namespace group
+
 open algebra
 -- ⁻¹ in eq.ops conflicts with group ⁻¹
 -- open eq.ops
@@ -16,6 +18,36 @@ open group.ops
 open quot
 local attribute set [reducible]
 
+section defs
+
+variables {A B : Type}
+variable [s1 : group A]
+variable [s2 : group B]
+include s1
+include s2
+
+-- the Prop of being hom
+definition homomorphic (f : A → B) : Prop := ∀ a b, f (a*b) = (f a)*(f b)
+-- type class for inference
+structure is_hom_class [class] (f : A → B) : Type :=
+          (is_hom : homomorphic f)
+-- the proof of hom_prop if the class can be inferred
+definition is_hom (f : A → B) [h : is_hom_class f] : homomorphic f :=
+           @is_hom_class.is_hom A B s1 s2 f h
+
+definition ker (f : A → B) [h : is_hom_class f] : set A := {a : A | f a = 1}
+check @ker
+
+definition isomorphic (f : A → B) := injective f ∧ homomorphic f
+structure is_iso_class [class] (f : A → B) extends is_hom_class f : Type :=
+          (inj : injective f)
+lemma iso_is_inj (f : A → B) [h : is_iso_class f] : injective f:=
+      @is_iso_class.inj A B s1 s2 f h
+lemma iso_is_iso (f : A → B) [h : is_iso_class f] : isomorphic f:=
+      and.intro (iso_is_inj f) (is_hom f)
+
+end defs
+
 section
 variables {A B : Type}
 variable [s1 : group A]
@@ -23,25 +55,21 @@ variable [s2 : group B]
 include s1
 include s2
 
-definition is_hom (f : A → B) := ∀ a b, f (a*b) = (f a)*(f b)
-definition is_iso (f : A → B) := injective f ∧ is_hom f
-
 variable f : A → B
 
-definition ker : set A := {a : A | f a = 1}
-
-variable Hom : is_hom f
+variable [h : is_hom_class f]
+include h
 
 theorem hom_map_one : f 1 = 1 :=
         have P : f 1 = (f 1) * (f 1), from
         calc f 1 = f (1*1) : mul_one
-        ... = (f 1) * (f 1) : Hom,
+        ... = (f 1) * (f 1) : is_hom f,
         eq.symm (mul.right_inv (f 1) ▸ (mul_inv_eq_of_eq_mul P))
 
 theorem hom_map_inv (a : A) : f a⁻¹ = (f a)⁻¹ :=
-        assert P : f 1 = 1, from hom_map_one f Hom,
+        assert P : f 1 = 1, from hom_map_one f,
         assert P1 : f (a⁻¹ * a) = 1, from (eq.symm (mul.left_inv a)) ▸ P,
-        assert P2 : (f a⁻¹) * (f a) = 1, from (Hom a⁻¹ a) ▸ P1,
+        assert P2 : (f a⁻¹) * (f a) = 1, from (is_hom f a⁻¹ a) ▸ P1,
         assert P3 : (f a⁻¹) * (f a) = (f a)⁻¹ * (f a), from eq.symm (mul.left_inv (f a)) ▸ P2,
         mul_right_cancel P3
 
@@ -52,82 +80,68 @@ theorem hom_map_mul_closed (H : set A) : mul_closed_on H → mul_closed_on (f '[
         obtain a2 (Pa2 : a2 ∈ H ∧ f a2 = b2), from Pb2,
         assert Pa1a2 : a1 * a2 ∈ H, from Pclosed a1 a2 (and.left Pa1) (and.left Pa2),
         assert Pb1b2 : f (a1 * a2) = b1 * b2, from calc
-        f (a1 * a2) = f a1 * f a2 : Hom a1 a2
+        f (a1 * a2) = f a1 * f a2 : is_hom f a1 a2
         ... = b1 * f a2 : {and.right Pa1}
         ... = b1 * b2 : {and.right Pa2},
         in_image Pa1a2 Pb1b2
 
-lemma ker.has_one : 1 ∈ ker f := hom_map_one f Hom
+lemma ker.has_one : 1 ∈ ker f := hom_map_one f
 
--- lean does not see Hom is used in the tactic rewrite so declare Hom explicitly
-lemma ker.has_inv (Hom : is_hom f) : subgroup.has_inv (ker f) :=
+lemma ker.has_inv : subgroup.has_inv (ker f) :=
       take a, assume Pa : f a = 1, calc
-      f a⁻¹ = (f a)⁻¹ : by rewrite (hom_map_inv f Hom)
+      f a⁻¹ = (f a)⁻¹ : by rewrite (hom_map_inv f)
       ... = 1⁻¹ : by rewrite Pa
       ... = 1 : by rewrite one_inv
 
-lemma ker.mul_closed (Hom : is_hom f) : mul_closed_on (ker f) :=
+lemma ker.mul_closed : mul_closed_on (ker f) :=
       take x y, assume (Px : f x = 1) (Py : f y = 1), calc
-      f (x*y) = (f x) * (f y) : by rewrite Hom
+      f (x*y) = (f x) * (f y) : by rewrite [is_hom f]
       ... = 1 : by rewrite [Px, Py, mul_one]
 
-lemma ker.normal (Hom : is_hom f) : same_left_right_coset (ker f) :=
+lemma ker.normal : same_left_right_coset (ker f) :=
       take a, funext (assume x, begin
       esimp [ker, set_of, glcoset, grcoset],
-      rewrite [*Hom, comm_mul_eq_one (f a⁻¹) (f x)]
+      rewrite [*(is_hom f), comm_mul_eq_one (f a⁻¹) (f x)]
       end)
 
 definition ker_is_normal_subgroup : is_normal_subgroup (ker f) :=
-  is_normal_subgroup.mk (ker.has_one f Hom) (ker.mul_closed f Hom) (ker.has_inv f Hom)
-    (ker.normal f Hom)
+  is_normal_subgroup.mk (ker.has_one f) (ker.mul_closed f) (ker.has_inv f)
+    (ker.normal f)
 
-end
-
-section
-variables {A B : Type}
-variable [s1 : group A]
-variable [s2 : group B]
-include s1
-include s2
-variable f : A → B
-variable Hom : is_hom f
+-- additional subgroup variable
 variable {H : set A}
 variable [is_subgH : is_subgroup H]
 include is_subgH
 
-theorem hom_map_subgroup (Hom : is_hom f) : is_subgroup (f '[H]) :=
-        have Pone : 1 ∈ f '[H], from in_image subg_has_one (hom_map_one f Hom),
-        have Pclosed : mul_closed_on (f '[H]), from hom_map_mul_closed f Hom H subg_mul_closed,
+theorem hom_map_subgroup : is_subgroup (f '[H]) :=
+        have Pone : 1 ∈ f '[H], from in_image subg_has_one (hom_map_one f),
+        have Pclosed : mul_closed_on (f '[H]), from hom_map_mul_closed f H subg_mul_closed,
         assert Pinv : ∀ b, b ∈ f '[H] → b⁻¹ ∈ f '[H], from
           assume b, assume Pimg,
           obtain a (Pa : a ∈ H ∧ f a = b), from Pimg,
           assert Painv : a⁻¹ ∈ H, from subg_has_inv a (and.left Pa),
-          assert Pfainv : (f a)⁻¹ ∈ f '[H], from in_image Painv (hom_map_inv f Hom a),
+          assert Pfainv : (f a)⁻¹ ∈ f '[H], from in_image Painv (hom_map_inv f a),
           and.right Pa ▸ Pfainv,
         is_subgroup.mk Pone Pclosed Pinv
 
 end
 
-structure hom_class [class] (A B : Type) [s1 : group A] [s2 : group B] : Type :=
-  (hom : A → B) (is_hom : is_hom hom)
-
 section hom_theorem
-check @ker_is_normal_subgroup
+
 variables {A B : Type}
 variable [s1 : group A]
 variable [s2 : group B]
 include s1
 include s2
-attribute hom_class.hom [coercion]
--- need to spell out that f is A to B otherwise it is ambiguous
-variable [f : hom_class A B]
 
--- bridge to lemmas that don't use inference but depend on the Prop directly
-private lemma Hom : is_hom f := @hom_class.is_hom A B s1 s2 _
+variable {f : A → B}
+
+variable [h : is_hom_class f]
+include h
 
 definition ker_nsubg [instance] : is_normal_subgroup (ker f) :=
-           is_normal_subgroup.mk (ker.has_one f Hom) (ker.mul_closed f Hom)
-           (ker.has_inv f Hom) (ker.normal f Hom)
+           is_normal_subgroup.mk (ker.has_one f) (ker.mul_closed f)
+           (ker.has_inv f) (ker.normal f)
 
 definition quot_over_ker [instance] : group (coset_of (ker f)) := mk_quotient_group (ker f)
 -- under the wrap the tower of concepts collapse to a simple condition
@@ -136,8 +150,8 @@ lemma ker_coset_same_val (a b : A): same_lcoset (ker f) a b → f a = f b :=
       assume Psame,
       assert Pin : f (b⁻¹*a) = 1, from subg_same_lcoset_in_lcoset a b Psame,
       assert P : (f b)⁻¹ * (f a) = 1, from calc
-      (f b)⁻¹ * (f a) = (f b⁻¹) * (f a) :  (hom_map_inv f Hom)
-      ... = f (b⁻¹*a) : by rewrite Hom
+      (f b)⁻¹ * (f a) = (f b⁻¹) * (f a) :  (hom_map_inv f)
+      ... = f (b⁻¹*a) : by rewrite [is_hom f]
       ... = 1 : by rewrite Pin,
       eq.symm (inv_inv (f b) ▸ inv_eq_of_mul_eq_one P)
 
@@ -148,10 +162,10 @@ example (a : A) : ker_natural_map ⟦a⟧ = f a := rfl
 lemma ker_coset_hom (a b : A) : ker_natural_map (⟦a⟧*⟦b⟧) = (ker_natural_map ⟦a⟧) * (ker_natural_map ⟦b⟧) := calc
       ker_natural_map (⟦a⟧*⟦b⟧) = ker_natural_map ⟦a*b⟧ : rfl
       ... = f (a*b) : rfl
-      ... = (f a) * (f b) : by rewrite Hom
+      ... = (f a) * (f b) : by rewrite [is_hom f]
       ... = (ker_natural_map ⟦a⟧) * (ker_natural_map ⟦b⟧) : rfl
 
-lemma ker_map_is_hom : is_hom (ker_natural_map : coset_of (ker f) → B) :=
+lemma ker_map_is_hom : homomorphic (ker_natural_map : coset_of (ker f) → B) :=
   take aK bK,
       quot.ind (λ a, quot.ind (λ b, ker_coset_hom a b) bK) aK
 
@@ -159,19 +173,19 @@ check @subg_in_lcoset_same_lcoset
 lemma ker_coset_inj (a b : A) : (ker_natural_map ⟦a⟧ = ker_natural_map ⟦b⟧) → ⟦a⟧ = ⟦b⟧ :=
       assume Pfeq : f a = f b,
       assert Painb : a ∈ b ∘> ker f, from calc
-      f (b⁻¹*a) = (f b⁻¹) * (f a) : by rewrite Hom
-      ... = (f b)⁻¹ * (f a)       : by rewrite (hom_map_inv f Hom)
+      f (b⁻¹*a) = (f b⁻¹) * (f a) : by rewrite [is_hom f]
+      ... = (f b)⁻¹ * (f a)       : by rewrite (hom_map_inv f)
       ... = (f a)⁻¹ * (f a)       : by rewrite Pfeq
       ... = 1                     : by rewrite (mul.left_inv (f a)),
       quot.sound (@subg_in_lcoset_same_lcoset _ _ (ker f) _ a b Painb)
 
 lemma ker_map_is_inj : injective (ker_natural_map : coset_of (ker f) → B) :=
-  take aK bK,
+      take aK bK,
       quot.ind (λ a, quot.ind (λ b, ker_coset_inj a b) bK) aK
 
 -- a special case of the fundamental homomorphism theorem or the first isomorphism theorem
-theorem first_isomorphism_theorem : is_iso (ker_natural_map : coset_of (ker f) → B) :=
-  and.intro ker_map_is_inj ker_map_is_hom
+theorem first_isomorphism_theorem : isomorphic (ker_natural_map : coset_of (ker f) → B) :=
+        and.intro ker_map_is_inj ker_map_is_hom
 
 end hom_theorem        
 end group
