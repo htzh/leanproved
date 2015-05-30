@@ -9,6 +9,8 @@ import algebra.group data .extra .hom .perm .finsubg
 namespace group
 open finset algebra function
 
+local attribute perm.f [coercion]
+
 section def
 variables {G S : Type}
 variable [ambientG : group G]
@@ -18,25 +20,38 @@ include finS
 variable [deceqS : decidable_eq S]
 include deceqS
 
-variable hom : G → perm S
-variable [of_hom : is_hom_class hom]
+definition subg_orbit (hom : G → perm S) (H : finset G) (a : S) : finset S :=
+           image (move_by a) (image hom H)
 
 variable [deceqG : decidable_eq G]
-include deceqG
-variable H : finset G
-variable [subgH : is_finsubg H]
+include deceqG -- required by {x ∈ H |p x} filtering
 
-local attribute perm.f [coercion]
+definition subg_stab (hom : G → perm S) (H : finset G) (a : S) : finset G :=
+           {f ∈ H | hom f a = a} 
 
-definition subg_orbit (a : S) : finset S := image (move_by a) (image hom H)
-definition subg_stab [reducible] (a : S) : finset G := {f ∈ H | hom f a = a} 
+end def
 
+section stab_is_subg
 check @subg_stab
-include subgH
-include of_hom
+variables {G S : Type}
+variable [ambientG : group G]
+include ambientG
+variable [finS : fintype S]
+include finS
+variable [deceqS : decidable_eq S]
+include deceqS
+variable [deceqG : decidable_eq G]
+include deceqG
 
-lemma subg_stab_closed {a : S}
-    : let stab := subg_stab hom H a in ∀ f g : G, f ∈ stab → g ∈ stab → f*g ∈ stab :=
+-- these are already specified by subg_stab hom H a
+variables {hom : G → perm S} {H : finset G} {a : S}
+
+variable [of_hom : is_hom_class hom]
+include of_hom
+variable [subgH : is_finsubg H]
+include subgH
+
+lemma subg_stab_closed : finset_mul_closed_on (subg_stab hom H a) :=
       take f g, assume Pfstab, assert Pf : hom f a = a, from of_mem_filter Pfstab,
       assume Pgstab, assert Pg : hom g a = a, from of_mem_filter Pgstab,
       assert Pfg : hom (f*g) a = a, from calc
@@ -47,13 +62,33 @@ lemma subg_stab_closed {a : S}
       assert PfginH : (f*g) ∈ H, from finsubg_mul_closed H f g (mem_of_mem_filter Pfstab) (mem_of_mem_filter Pgstab),
       mem_filter_of_mem PfginH Pfg
 
-lemma subg_stab_has_one {a : S} : 1 ∈ subg_stab hom H a :=
+lemma subg_stab_has_one : 1 ∈ subg_stab hom H a :=
       assert P : hom 1 a = a, from calc
         hom 1 a = (1 : perm S) a : hom_map_one hom ▸ eq.refl (hom 1 a)
         ... = a : rfl,
       assert PoneinH : 1 ∈ H, from finsubg_has_one H,
       mem_filter_of_mem PoneinH P
 
-end def
+lemma subg_stab_has_inv : finset_has_inv (subg_stab hom H a) :=
+      take f, assume Pfstab, assert Pf : hom f a = a, from of_mem_filter Pfstab,
+      assert Pfinv : hom f⁻¹ a = a, from calc
+        hom f⁻¹ a = hom f⁻¹ ((hom f) a) : Pf
+        ... = perm.f ((hom f⁻¹) * (hom f)) a : rfl
+        ... = hom (f⁻¹ * f) a : is_hom hom
+        ... = hom 1 a : mul.left_inv
+        ... = (1 : perm S) a : hom_map_one hom,
+      assert PfinvinH : f⁻¹ ∈ H, from finsubg_has_inv H f (mem_of_mem_filter Pfstab),
+      mem_filter_of_mem PfinvinH Pfinv
+
+definition subg_stab_is_finsubg [instance] :
+           is_finsubg (subg_stab hom H a) :=
+           is_finsubg.mk subg_stab_has_one subg_stab_closed subg_stab_has_inv
+
+check @subg_stab_is_finsubg       
+end stab_is_subg
+
+section orbit_stabilizer
+
+end orbit_stabilizer
 
 end group
