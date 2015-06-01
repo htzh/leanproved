@@ -34,8 +34,8 @@ definition stab (hom : G → perm S) (H : finset G) (a : S) : finset G :=
 
 end def
 
-section stab_is_subg
-check @stab
+section orbit_stabilizer
+
 variables {G S : Type}
 variable [ambientG : group G]
 include ambientG
@@ -196,11 +196,11 @@ lemma subg_moversets_of_orbit_eq_stab_lcosets :
       end))
 
 open nat
-theorem orbit_stabilizer : card H = card (orbit hom H a) * card (stab hom H a) := sorry
 
-end stab_is_subg
-
-section orbit_stabilizer
+theorem orbit_stabilizer_theorem : card H = card (orbit hom H a) * card (stab hom H a) :=
+        calc card H = card (fin_lcosets (stab hom H a) H) * card (stab hom H a) : lagrange_theorem stab_subset
+        ... = card (image (moverset hom H a) (orbit hom H a)) * card (stab hom H a) : subg_moversets_of_orbit_eq_stab_lcosets
+        ... = card (orbit hom H a) * card (stab hom H a) : card_image_eq_of_inj_on subg_moverset_inj_on_orbit  
 
 end orbit_stabilizer
 
