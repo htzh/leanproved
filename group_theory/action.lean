@@ -84,10 +84,7 @@ lemma reverse_move {h g : G} : g ∈ moverset hom H a (hom h a) → hom (h⁻¹*
       ... = perm.f (1 : perm S) a        : mul.left_inv (hom h)
       ... = a                            : rfl
 
-variable [subgH : is_finsubg H]
-include subgH
-
-lemma subg_moverset_inj_on_orbit : set.inj_on (moverset hom H a) (ts (orbit hom H a)) :=
+lemma moverset_inj_on_orbit : set.inj_on (moverset hom H a) (ts (orbit hom H a)) :=
       take b1 b2,
       assume Pb1, obtain h1 Ph1₁ Ph1₂, from exists_of_orbit Pb1,
       assert Ph1b1 : h1 ∈ moverset hom H a b1,
@@ -97,6 +94,9 @@ lemma subg_moverset_inj_on_orbit : set.inj_on (moverset hom H a) (ts (orbit hom 
         rewrite Pmeq at Ph1b1,
         apply of_mem_filter Ph1b1
       end
+
+variable [subgH : is_finsubg H]
+include subgH
 
 lemma subg_stab_of_move {h g : G} :
       h ∈ H → g ∈ moverset hom H a (hom h a) → h⁻¹*g ∈ stab hom H a :=
@@ -184,15 +184,12 @@ lemma subg_moversets_of_orbit_eq_stab_lcosets :
       (assume Pl, obtain b Pb₁ Pb₂, from exists_of_mem_image Pl,
       obtain h Ph, from subg_moverset_of_orbit_is_lcoset_of_stab b Pb₁, begin
       rewrite [↑fin_lcosets, mem_image_eq],
-      rewrite Pb₂ at Ph,
-      exact exists.intro h Ph
+      existsi h, subst Pb₂, assumption
       end)
       (assume Pr, obtain h Ph₁ Ph₂, from exists_of_mem_image Pr,
       obtain b Pb, from @subg_lcoset_of_stab_is_moverset_of_orbit G S ambientG finS deceqS deceqG hom H a Hom subgH h Ph₁, begin
       rewrite [mem_image_eq],
-      existsi b,
-      subst Ph₂,
-      assumption
+      existsi b, subst Ph₂, assumption
       end))
 
 open nat
@@ -200,7 +197,7 @@ open nat
 theorem orbit_stabilizer_theorem : card H = card (orbit hom H a) * card (stab hom H a) :=
         calc card H = card (fin_lcosets (stab hom H a) H) * card (stab hom H a) : lagrange_theorem stab_subset
         ... = card (image (moverset hom H a) (orbit hom H a)) * card (stab hom H a) : subg_moversets_of_orbit_eq_stab_lcosets
-        ... = card (orbit hom H a) * card (stab hom H a) : card_image_eq_of_inj_on subg_moverset_inj_on_orbit
+        ... = card (orbit hom H a) * card (stab hom H a) : card_image_eq_of_inj_on moverset_inj_on_orbit
 
 end orbit_stabilizer
 
