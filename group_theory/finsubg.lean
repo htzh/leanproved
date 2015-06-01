@@ -31,6 +31,7 @@ structure is_finsubg [class] (H : finset G) : Type :=
           (has_one : 1 ∈ H)
           (mul_closed : finset_mul_closed_on H)
           (has_inv : finset_has_inv H)
+set_option pp.full_names true
 check @is_finsubg 
 
 lemma finsubg_has_one (H : finset G) [h : is_finsubg H] : 1 ∈ H :=
@@ -54,6 +55,7 @@ definition finsubg_to_subg [instance] {H : finset G} [h : is_finsubg H]
 end subg
 
 section lagrange
+-- this is work based on is_subgroup. will test is_finsubg somewhere else first.
 variable {A : Type}
 variable [deceq : decidable_eq A]
 include deceq
