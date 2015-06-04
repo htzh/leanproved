@@ -305,7 +305,8 @@ lemma ne_and_not_mem_of_not_mem_cons {x y : A} {l : list A} : x ∉ y::l → x �
 | (a::l) H := begin rewrite all_cons_eq at H, end-/
 
 -- new for list/comb dependent map theory
-definition dinj (p : A → Prop) (f : Π a, p a → B) := ∀ ⦃a1 a2⦄ (h1 : p a1) (h2 : p a2), a1 ≠ a2 → (f a1 h1) ≠ (f a2 h2)
+definition dinj₁ (p : A → Prop) (f : Π a, p a → B) := ∀ ⦃a1 a2⦄ (h1 : p a1) (h2 : p a2), a1 ≠ a2 → (f a1 h1) ≠ (f a2 h2)
+definition dinj (p : A → Prop) (f : Π a, p a → B) := ∀ ⦃a1 a2⦄ (h1 : p a1) (h2 : p a2), (f a1 h1) = (f a2 h2) → a1 = a2
 
 definition dmap (p : A → Prop) [h : decidable_pred p] (f : Π a, p a → B) : list A → list B
 | []       := []
@@ -353,22 +354,26 @@ lemma map_of_dmap_inv_pos {g : B → A} (Pinv : ∀ a (Pa : p a), g (f a Pa) = a
                             from take x Pxin, Pal x (mem_cons_of_mem a Pxin),
                           by rewrite [dmap_cons_of_pos Pa, map_cons, Pinv, map_of_dmap_inv_pos Pl]
 
-lemma dinj_not_mem_of_dmap (Pdi : dinj p f) : ∀ {l : list A} {a} (Pa : p a), a ∉ l → (f a Pa) ∉ dmap p f l
-| []           := take b Pb Pbnin, !not_mem_nil
-| (a::l)       := take b Pb Pbnin,
-                  assert Pand : b ≠ a ∧ b ∉ l, from ne_and_not_mem_of_not_mem_cons Pbnin,
-                  decidable.rec_on (h a)
-                  (λ Pa, begin
-                    rewrite [dmap_cons_of_pos Pa],
-                    apply not_mem_cons_of_ne_and_not_mem,
-                    apply and.intro,
-                      exact Pdi Pb Pa (and.left Pand),
-                      exact dinj_not_mem_of_dmap Pb (and.right Pand)
+lemma dinj_mem_of_mem_of_dmap (Pdi : dinj p f) : ∀ {l : list A} {a} (Pa : p a), (f a Pa) ∈ dmap p f l → a ∈ l
+| []           := take a Pa Pinnil, by contradiction
+| (b::l)       := take a Pa Pmap,
+                  decidable.rec_on (h b)
+                  (λ Pb, begin
+                    rewrite (dmap_cons_of_pos Pb) at Pmap,
+                    rewrite mem_cons_iff at Pmap,
+                    rewrite mem_cons_iff,
+                    apply (or_of_or_of_imp_of_imp Pmap),
+                      apply Pdi,
+                      apply dinj_mem_of_mem_of_dmap Pa
                   end) 
-                  (λ nPa, begin
-                     rewrite [dmap_cons_of_neg nPa],
-                     exact dinj_not_mem_of_dmap Pb (and.right Pand)
+                  (λ nPb, begin
+                     rewrite (dmap_cons_of_neg nPb) at Pmap,
+                     apply mem_cons_of_mem,
+                     exact dinj_mem_of_mem_of_dmap Pa Pmap
                   end)
+
+lemma dinj_not_mem_of_dmap (Pdi : dinj p f) {l : list A} {a} (Pa : p a) : a ∉ l → (f a Pa) ∉ dmap p f l :=
+      not_imp_not_of_imp (dinj_mem_of_mem_of_dmap Pdi Pa)
 
 lemma dmap_nodup_of_dinj (Pdi : dinj p f): ∀ {l : list A}, nodup l → nodup (dmap p f l)
 | []                 := take P, nodup.ndnil
@@ -488,9 +493,7 @@ example (n : nat) : ∀ (i j : less_than n), decidable (i = j)
 end less_than
 
 lemma lt_dinj (n : nat) : dinj (λ i, i < n) less_than.mk :=
-      take a1 a2 Pa1 Pa2 Pne, not.intro
-        (assume Pelt, less_than.no_confusion Pelt
-          (assume Pe, absurd Pe Pne))
+      take a1 a2 Pa1 Pa2 Pmkeq, less_than.no_confusion Pmkeq (λ Pe Pqe, Pe)
 
 lemma lt_inv (n i : nat) (Plt : i < n) : less_than.val (less_than.mk i Plt) = i := rfl
 

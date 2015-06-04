@@ -81,7 +81,7 @@ lemma reverse_move {h g : G} : g ∈ moverset hom H a (hom h a) → hom (h⁻¹*
       ... = ((hom h⁻¹) ∘ hom h) a        : {Pga}
       ... = perm.f ((hom h⁻¹) * hom h) a : rfl
       ... = perm.f ((hom h)⁻¹ * hom h) a : hom_map_inv hom h
-      ... = perm.f (1 : perm S) a        : mul.left_inv (hom h)
+      ... = (1 : perm S) a               : mul.left_inv (hom h)
       ... = a                            : rfl
 
 lemma moverset_inj_on_orbit : set.inj_on (moverset hom H a) (ts (orbit hom H a)) :=
