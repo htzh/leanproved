@@ -305,7 +305,6 @@ lemma ne_and_not_mem_of_not_mem_cons {x y : A} {l : list A} : x ∉ y::l → x �
 | (a::l) H := begin rewrite all_cons_eq at H, end-/
 
 -- new for list/comb dependent map theory
-definition dinj₁ (p : A → Prop) (f : Π a, p a → B) := ∀ ⦃a1 a2⦄ (h1 : p a1) (h2 : p a2), a1 ≠ a2 → (f a1 h1) ≠ (f a2 h2)
 definition dinj (p : A → Prop) (f : Π a, p a → B) := ∀ ⦃a1 a2⦄ (h1 : p a1) (h2 : p a2), (f a1 h1) = (f a2 h2) → a1 = a2
 
 definition dmap (p : A → Prop) [h : decidable_pred p] (f : Π a, p a → B) : list A → list B
