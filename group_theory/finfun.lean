@@ -68,6 +68,44 @@ end list
 namespace fintype
 open list
 
+section found
+
+variables {A B : Type}
+
+lemma eq_of_kth_eq [deceqA : decidable_eq A] {l1 l2 : list A} (Pleq : length l1 = length l2)
+    : (∀ (k : nat) (Plt1 : k < length l1) (Plt2 : k < length l2), kth k l1 Plt1 = kth k l2 Plt2) → l1 = l2 :=
+    sorry
+check @eq_of_kth_eq
+lemma kth_of_map {A B : Type} {f : A → B} {l : list A} {k : nat} (Plt : k < length l)
+    : ∀ (Pmlt : k < length (map f l)), kth k (map f l) Pmlt = f (kth k l Plt) := sorry
+lemma find_kth {A : Type} [deceqA : decidable_eq A] {l : list A} {k : nat} :
+      ∀ P, find (kth k l P) l < length l  := sorry
+lemma find_kth_of_nodup {A : Type} [deceqA : decidable_eq A] {l : list A} {k : nat} (Plt : k < length l)
+    : nodup l → find (kth k l Plt) l = k := sorry
+    
+variable [finA : fintype A]
+include finA
+
+lemma found_in_range [deceqB : decidable_eq B] {f : A → B} (b : B) :
+    ∀ (l : list A) (P : find b (map f l) < length l), f (kth (find b (map f l)) l P) = b
+| []       := assume P, begin exact absurd P !not_lt_zero end
+| (a::l)   := decidable.rec_on (deceqB b (f a))
+              (assume Peq, begin
+              rewrite [map_cons f a l, find_cons_of_eq _ Peq],
+              intro P, rewrite [kth_zero_of_cons], exact (Peq⁻¹)
+              end)
+              (assume Pne, begin
+              rewrite [map_cons f a l, find_cons_of_ne _ Pne],
+              intro P,
+              rewrite [kth_succ_of_cons (find b (map f l)) l P],
+              exact found_in_range l (lt_of_succ_lt_succ P)
+              end)
+
+lemma found_in_domain [deceqA : decidable_eq A] {f : A → B} (a : A) :
+      ∀ (l : list A) (P : find a l < length l), f (kth (find a l) l P) = f a := sorry
+
+end found
+
 section list_to_fun
 variables {A B : Type}
 variable [finA : fintype A]
@@ -82,11 +120,28 @@ definition list_to_fun (l : list B) (leq : length l = card A) : A → B :=
            have Pltl : k < length l, from leq⁻¹ ▸ Plt,
            kth _ _ Pltl
 
-lemma list_eq_map_fun (l : list B) (leq : length l = card A)
-                    : l = map (list_to_fun l leq) (elements_of A) := sorry
-lemma dinj_list_to_fun : dinj (λ (l : list B), length l = card A) list_to_fun :=
+check @find_mem           
+lemma list_to_fun_apply (l : list B) (leq : length l = card A) (a : A) :
+      ∀ P, list_to_fun l leq a = kth (find a (elements_of A)) l P :=
+      assume P, rfl
+
+lemma list_eq_map_list_to_fun [deceqB : decidable_eq B] (l : list B) (leq : length l = card A)
+                    : l = map (list_to_fun l leq) (elements_of A) :=
+      begin
+        apply eq_of_kth_eq ((len_map (list_to_fun l leq) (elements_of A))⁻¹ ▸ leq),
+        intro k Plt Plt2,
+        assert Plt1 : k < length (elements_of A), {apply leq ▸ Plt},
+        assert Plt3 : find (kth k (elements_of A) Plt1) (elements_of A) < length l,
+          {rewrite leq, apply find_kth},
+        rewrite [kth_of_map Plt1 Plt2, list_to_fun_apply l leq (kth k (elements_of A) Plt1) Plt3],
+        generalize Plt3,
+        rewrite [↑elements_of, find_kth_of_nodup Plt1 (unique A)],
+        intro Plt, exact rfl
+      end
+
+lemma dinj_list_to_fun [deceqB : decidable_eq B] : dinj (λ (l : list B), length l = card A) list_to_fun :=
       take l1 l2 Pl1 Pl2 Peq,
-      by rewrite [list_eq_map_fun l1 Pl1, list_eq_map_fun l2 Pl2, Peq]
+      by rewrite [list_eq_map_list_to_fun l1 Pl1, list_eq_map_list_to_fun l2 Pl2, Peq]
 
 variable [finB : fintype B]
 include finB
@@ -119,23 +174,8 @@ definition right_inv {f : A → B} (surj : surjective f) : B → A :=
            λ b, let elts := elems A, k := find b (map f elts) in
            kth k elts (found_of_surj surj b)
 
-lemma found_of_map {f : A → B} (b : B) :
-    ∀ (l : list A) (P : find b (map f l) < length l), f (kth (find b (map f l)) l P) = b
-| []       := assume P, begin exact absurd P !not_lt_zero end
-| (a::l)   := decidable.rec_on (deceqB b (f a))
-              (assume Peq, begin
-              rewrite [map_cons f a l, find_cons_of_eq _ Peq],
-              intro P, rewrite [kth_zero_of_cons], exact (Peq⁻¹)
-              end)
-              (assume Pne, begin
-              rewrite [map_cons f a l, find_cons_of_ne _ Pne],
-              intro P,
-              rewrite [kth_succ_of_cons (find b (map f l)) l P],
-              exact found_of_map l (lt_of_succ_lt_succ P)
-              end)
-
 lemma id_of_right_inv {f : A → B} (surj : surjective f) : f ∘ (right_inv surj) = id :=
-      funext (λ b, found_of_map b (elems A) (found_of_surj surj b))
+      funext (λ b, found_in_range b (elems A) (found_of_surj surj b))
 end surj_inv
 
 -- inj functions for equal card types are also surj and therefore bij
