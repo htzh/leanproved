@@ -74,7 +74,8 @@ definition kth : ∀ k (l : list A), k < length l → A
 
 lemma kth_zero_of_cons {a} (l : list A) (P : 0 < length (a::l)) : kth 0 (a::l) P = a :=
       rfl
-lemma kth_succ_of_cons {a} k (l : list A) (P : k+1 < length (a::l)) : kth (succ k) (a::l) P = kth k l (lt_of_succ_lt_succ P) :=
+lemma kth_succ_of_cons {a} k (l : list A) (P : k+1 < length (a::l)) : 
+      kth (succ k) (a::l) P = kth k l (lt_of_succ_lt_succ P) :=
       rfl
 
 end kth
@@ -89,17 +90,69 @@ section found
 
 variables {A B : Type}
 
+lemma kth_mem : ∀ {k : nat} {l : list A} P, kth k l P ∈ l
+| k []            := assume P, absurd P !not_lt_zero
+| 0 (a::l)        := assume P, by rewrite kth_zero_of_cons; apply mem_cons
+| (succ k) (a::l) := assume P, by
+                  rewrite [kth_succ_of_cons]; apply mem_cons_of_mem a; apply kth_mem
+
 lemma eq_of_kth_eq [deceqA : decidable_eq A] {l1 l2 : list A} (Pleq : length l1 = length l2)
     : (∀ (k : nat) (Plt1 : k < length l1) (Plt2 : k < length l2), kth k l1 Plt1 = kth k l2 Plt2) → l1 = l2 :=
     sorry
-check @eq_of_kth_eq
-lemma kth_of_map {A B : Type} {f : A → B} {l : list A} {k : nat} (Plt : k < length l)
-    : ∀ (Pmlt : k < length (map f l)), kth k (map f l) Pmlt = f (kth k l Plt) := sorry
-lemma find_kth {A : Type} [deceqA : decidable_eq A] {l : list A} {k : nat} :
-      ∀ P, find (kth k l P) l < length l  := sorry
-lemma find_kth_of_nodup {A : Type} [deceqA : decidable_eq A] {l : list A} {k : nat} (Plt : k < length l)
-    : nodup l → find (kth k l Plt) l = k := sorry
-    
+
+lemma kth_of_map {f : A → B} :
+      ∀ {k : nat} {l : list A} Plt Pmlt, kth k (map f l) Pmlt = f (kth k l Plt)
+| k []            := assume P, absurd P !not_lt_zero
+| 0 (a::l)        := assume Plt, by
+                  rewrite [map_cons]; intro Pmlt; rewrite [kth_zero_of_cons]
+| (succ k) (a::l) := assume P, begin
+                  rewrite [map_cons], intro Pmlt, rewrite [*kth_succ_of_cons],
+                  apply kth_of_map 
+                  end
+
+lemma kth_find {A : Type} [deceqA : decidable_eq A] :
+      ∀ {l : list A} {a} P, kth (find a l) l P = a
+| []            := take a, assume P, absurd P !not_lt_zero
+| (x::l)        := take a, begin
+                assert Pd : decidable (a = x), {apply deceqA},
+                cases Pd with Pe Pne,
+                  rewrite [find_cons_of_eq l Pe], intro P, rewrite [kth_zero_of_cons, Pe],
+                  rewrite [find_cons_of_ne l Pne], intro P, rewrite [kth_succ_of_cons],
+                  apply kth_find
+                end
+
+lemma find_kth {A : Type} [deceqA : decidable_eq A] :
+      ∀ {k : nat} {l : list A} P, find (kth k l P) l < length l
+| k []            := assume P, absurd P !not_lt_zero
+| 0 (a::l)        := assume P, begin 
+                  rewrite [kth_zero_of_cons, find_cons_of_eq l rfl, length_cons],
+                  exact !zero_lt_succ 
+                  end
+| (succ k) (a::l) := assume P, begin
+                  rewrite [kth_succ_of_cons],
+                  assert Pd : decidable ((kth k l (lt_of_succ_lt_succ P)) = a),
+                    {apply deceqA},
+                  cases Pd with Pe Pne,
+                    rewrite [find_cons_of_eq l Pe], apply zero_lt_succ,
+                    rewrite [find_cons_of_ne l Pne], apply succ_lt_succ, apply find_kth
+                  end
+
+lemma find_kth_of_nodup {A : Type} [deceqA : decidable_eq A] :
+      ∀ {k : nat} {l : list A} P, nodup l → find (kth k l P) l = k
+| k []            := assume P, absurd P !not_lt_zero
+| 0 (a::l)        := assume Plt Pnodup,
+                  by rewrite [kth_zero_of_cons, find_cons_of_eq l rfl]
+| (succ k) (a::l) := assume Plt Pnodup, begin
+                  rewrite [kth_succ_of_cons],
+                  assert Pd : decidable ((kth k l (lt_of_succ_lt_succ Plt)) = a),
+                    {apply deceqA},
+                  cases Pd with Pe Pne,
+                    assert Pin : a ∈ l, {rewrite -Pe, apply kth_mem},
+                    exact absurd Pin (not_mem_of_nodup_cons Pnodup),
+                    rewrite [find_cons_of_ne l Pne], apply congr (eq.refl succ),
+                    apply find_kth_of_nodup (lt_of_succ_lt_succ Plt) (nodup_of_nodup_cons Pnodup)
+                  end
+
 variable [finA : fintype A]
 include finA
 
@@ -127,21 +180,40 @@ section list_to_fun
 variables {A B : Type}
 variable [finA : fintype A]
 include finA
+
+lemma length_map_of_fintype (f : A → B) : length (map f (elems A)) = card A :=
+      by apply length_map
+
 variable [deceqA : decidable_eq A]
 include deceqA
+
+lemma fintype_find (a : A) : find a (elements_of A) < card A :=
+      find_lt_length (complete a)
  
 definition list_to_fun (l : list B) (leq : length l = card A) : A → B :=
-           assume x,
-           let k := find x (elements_of A) in
-           have Plt : k < card A, from (find_lt_length (complete x)),
-           have Pltl : k < length l, from leq⁻¹ ▸ Plt,
-           kth _ _ Pltl
+           take x,
+           kth _ _ (leq⁻¹ ▸ fintype_find x)
+
+definition all_funs [finB : fintype B] : list (A → B) :=
+           dmap (λ l, length l = card A) list_to_fun (all_lists_of_len (card A))
 
 lemma list_to_fun_apply (l : list B) (leq : length l = card A) (a : A) :
       ∀ P, list_to_fun l leq a = kth (find a (elements_of A)) l P :=
       assume P, rfl
 
-lemma list_eq_map_list_to_fun [deceqB : decidable_eq B] (l : list B) (leq : length l = card A)
+variable [deceqB : decidable_eq B]
+include deceqB
+
+lemma fun_eq_list_to_fun_map (f : A → B) : ∀ P, f = list_to_fun (map f (elements_of A)) P :=
+      assume Pleq, funext (take a, 
+      assert Plt : _, from Pleq⁻¹ ▸ find_lt_length (complete a), begin
+      rewrite [list_to_fun_apply _ Pleq a (Pleq⁻¹ ▸ find_lt_length (complete a))],
+      assert Pmlt : find a (elems A) < length (map f (elems A)), 
+        {rewrite length_map, exact Plt},
+      rewrite [@kth_of_map A B f (find a (elements_of A)) (elements_of A) Plt _, kth_find]
+      end)
+
+lemma list_eq_map_list_to_fun  (l : list B) (leq : length l = card A)
                     : l = map (list_to_fun l leq) (elements_of A) :=
       begin
         apply eq_of_kth_eq ((length_map (list_to_fun l leq) (elements_of A))⁻¹ ▸ leq),
@@ -155,14 +227,25 @@ lemma list_eq_map_list_to_fun [deceqB : decidable_eq B] (l : list B) (leq : leng
         intro Plt, exact rfl
       end
 
-lemma dinj_list_to_fun [deceqB : decidable_eq B] : dinj (λ (l : list B), length l = card A) list_to_fun :=
+lemma dinj_list_to_fun : dinj (λ (l : list B), length l = card A) list_to_fun :=
       take l1 l2 Pl1 Pl2 Peq,
       by rewrite [list_eq_map_list_to_fun l1 Pl1, list_eq_map_list_to_fun l2 Pl2, Peq]
 
 variable [finB : fintype B]
 include finB
-definition all_funs : list (A → B) :=
-           dmap (λ l, length l = card A) list_to_fun (all_lists_of_len (card A))
+
+lemma nodup_all_funs : nodup (@all_funs A B _ _ _) := 
+      dmap_nodup_of_dinj dinj_list_to_fun (nodup_all_lists _)
+
+lemma all_funs_complete (f : A → B) : f ∈ all_funs :=
+      assert Plin : map f (elems A) ∈ all_lists_of_len (card A), 
+        from mem_all_lists (card A) _ (by rewrite length_map),
+      assert Plfin : list_to_fun (map f (elems A)) (length_map_of_fintype f) ∈ all_funs, 
+        from mem_of_dmap _ Plin,
+      begin rewrite [fun_eq_list_to_fun_map f (length_map_of_fintype f)], apply Plfin end 
+
+definition fun_is_fintype [instance] : fintype (A → B) :=
+           fintype.mk all_funs nodup_all_funs all_funs_complete
 
 end list_to_fun
 
