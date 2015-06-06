@@ -96,9 +96,34 @@ lemma kth_mem : ∀ {k : nat} {l : list A} P, kth k l P ∈ l
 | (succ k) (a::l) := assume P, by
                   rewrite [kth_succ_of_cons]; apply mem_cons_of_mem a; apply kth_mem
 
-lemma eq_of_kth_eq [deceqA : decidable_eq A] {l1 l2 : list A} (Pleq : length l1 = length l2)
-    : (∀ (k : nat) (Plt1 : k < length l1) (Plt2 : k < length l2), kth k l1 Plt1 = kth k l2 Plt2) → l1 = l2 :=
-    sorry
+-- Leo provided the following proof.
+lemma eq_of_kth_eq [deceqA : decidable_eq A]
+      : ∀ {l1 l2 : list A} (Pleq : length l1 = length l2),
+          (∀ (k : nat) (Plt1 : k < length l1) (Plt2 : k < length l2), kth k l1 Plt1 = kth k l2 Plt2) → l1 = l2
+| []       []       h₁ h₂ := rfl
+| (a₁::l₁) []       h₁ h₂ := by contradiction
+| []       (a₂::l₂) h₁ h₂ := by contradiction
+| (a₁::l₁) (a₂::l₂) h₁ h₂ :=
+  have ih₁ : length l₁ = length l₂, by injection h₁; eassumption,
+  have ih₂ : ∀ (k : nat) (plt₁ : k < length l₁) (plt₂ : k < length l₂), kth k l₁ plt₁ = kth k l₂ plt₂,
+    begin
+      intro k plt₁ plt₂,
+      have splt₁ : succ k < length l₁ + 1, from succ_le_succ plt₁,
+      have splt₂ : succ k < length l₂ + 1, from succ_le_succ plt₂,
+      have keq   : kth (succ k) (a₁::l₁) splt₁ = kth (succ k) (a₂::l₂) splt₂, from h₂ (succ k) splt₁ splt₂,
+      rewrite *kth_succ_of_cons at keq,
+      exact keq
+    end,
+  assert ih  : l₁ = l₂, from eq_of_kth_eq ih₁ ih₂,
+  assert k₁  : a₁ = a₂,
+    begin
+      have lt₁ : 0 < length (a₁::l₁), from !zero_lt_succ,
+      have lt₂ : 0 < length (a₂::l₂), from !zero_lt_succ,
+      have e₁  : kth 0 (a₁::l₁) lt₁ = kth 0 (a₂::l₂) lt₂, from h₂ 0 lt₁ lt₂,
+      rewrite *kth_zero_of_cons at e₁,
+      assumption
+    end,
+  by subst l₁; subst a₁
 
 lemma kth_of_map {f : A → B} :
       ∀ {k : nat} {l : list A} Plt Pmlt, kth k (map f l) Pmlt = f (kth k l Plt)
@@ -156,7 +181,7 @@ lemma find_kth_of_nodup {A : Type} [deceqA : decidable_eq A] :
 variable [finA : fintype A]
 include finA
 
-lemma found_in_range [deceqB : decidable_eq B] {f : A → B} (b : B) :
+lemma find_in_range [deceqB : decidable_eq B] {f : A → B} (b : B) :
     ∀ (l : list A) (P : find b (map f l) < length l), f (kth (find b (map f l)) l P) = b
 | []       := assume P, begin exact absurd P !not_lt_zero end
 | (a::l)   := decidable.rec_on (deceqB b (f a))
@@ -168,11 +193,8 @@ lemma found_in_range [deceqB : decidable_eq B] {f : A → B} (b : B) :
               rewrite [map_cons f a l, find_cons_of_ne _ Pne],
               intro P,
               rewrite [kth_succ_of_cons (find b (map f l)) l P],
-              exact found_in_range l (lt_of_succ_lt_succ P)
+              exact find_in_range l (lt_of_succ_lt_succ P)
               end)
-
-lemma found_in_domain [deceqA : decidable_eq A] {f : A → B} (a : A) :
-      ∀ (l : list A) (P : find a l < length l), f (kth (find a l) l P) = f a := sorry
 
 end found
 
@@ -187,7 +209,7 @@ lemma length_map_of_fintype (f : A → B) : length (map f (elems A)) = card A :=
 variable [deceqA : decidable_eq A]
 include deceqA
 
-lemma fintype_find (a : A) : find a (elements_of A) < card A :=
+lemma fintype_find (a : A) : find a (elems A) < card A :=
       find_lt_length (complete a)
  
 definition list_to_fun (l : list B) (leq : length l = card A) : A → B :=
@@ -198,30 +220,30 @@ definition all_funs [finB : fintype B] : list (A → B) :=
            dmap (λ l, length l = card A) list_to_fun (all_lists_of_len (card A))
 
 lemma list_to_fun_apply (l : list B) (leq : length l = card A) (a : A) :
-      ∀ P, list_to_fun l leq a = kth (find a (elements_of A)) l P :=
+      ∀ P, list_to_fun l leq a = kth (find a (elems A)) l P :=
       assume P, rfl
 
 variable [deceqB : decidable_eq B]
 include deceqB
 
-lemma fun_eq_list_to_fun_map (f : A → B) : ∀ P, f = list_to_fun (map f (elements_of A)) P :=
+lemma fun_eq_list_to_fun_map (f : A → B) : ∀ P, f = list_to_fun (map f (elems A)) P :=
       assume Pleq, funext (take a, 
       assert Plt : _, from Pleq⁻¹ ▸ find_lt_length (complete a), begin
       rewrite [list_to_fun_apply _ Pleq a (Pleq⁻¹ ▸ find_lt_length (complete a))],
       assert Pmlt : find a (elems A) < length (map f (elems A)), 
         {rewrite length_map, exact Plt},
-      rewrite [@kth_of_map A B f (find a (elements_of A)) (elements_of A) Plt _, kth_find]
+      rewrite [@kth_of_map A B f (find a (elems A)) (elems A) Plt _, kth_find]
       end)
 
 lemma list_eq_map_list_to_fun  (l : list B) (leq : length l = card A)
                     : l = map (list_to_fun l leq) (elements_of A) :=
       begin
-        apply eq_of_kth_eq ((length_map (list_to_fun l leq) (elements_of A))⁻¹ ▸ leq),
+      apply eq_of_kth_eq, rewrite length_map, apply leq,
         intro k Plt Plt2,
         assert Plt1 : k < length (elements_of A), {apply leq ▸ Plt},
-        assert Plt3 : find (kth k (elements_of A) Plt1) (elements_of A) < length l,
+        assert Plt3 : find (kth k (elements_of A) Plt1) (elems A) < length l,
           {rewrite leq, apply find_kth},
-        rewrite [kth_of_map Plt1 Plt2, list_to_fun_apply l leq (kth k (elements_of A) Plt1) Plt3],
+        rewrite [kth_of_map Plt1 Plt2, list_to_fun_apply l leq _ Plt3],
         generalize Plt3,
         rewrite [↑elements_of, find_kth_of_nodup Plt1 (unique A)],
         intro Plt, exact rfl
@@ -255,7 +277,7 @@ variable [finA : fintype A]
 include finA
 
 -- surj from fintype domain implies fintype range
-lemma mem_map_of_surj {f : A → B} (surj : surjective f) : ∀ b, b ∈ map f (elements_of A) :=
+lemma mem_map_of_surj {f : A → B} (surj : surjective f) : ∀ b, b ∈ map f (elems A) :=
       take b, obtain a Peq, from surj b,
       Peq ▸ mem_map f (complete a)
 
@@ -274,7 +296,7 @@ definition right_inv {f : A → B} (surj : surjective f) : B → A :=
            kth k elts (found_of_surj surj b)
 
 lemma id_of_right_inv {f : A → B} (surj : surjective f) : f ∘ (right_inv surj) = id :=
-      funext (λ b, found_in_range b (elems A) (found_of_surj surj b))
+      funext (λ b, find_in_range b (elems A) (found_of_surj surj b))
 end surj_inv
 
 -- inj functions for equal card types are also surj and therefore bij

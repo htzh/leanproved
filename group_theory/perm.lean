@@ -6,33 +6,7 @@ Author : Haitao Zhang
 -/
 import algebra.group data .finfun
 
-open nat list algebra
-
-
-namespace function
-
-lemma left_inv_of_right_inv_of_inj
-      {A : Type} [h : decidable_eq A] {B : Type} {f : A → B} {g : B → A}
-      : injective f → f∘g = id → g∘f = id :=
-      assume Pinj Pright,
-      assert Pid : f∘(g∘f) = f, from calc
-        f∘g∘f = (f∘g)∘f : compose.assoc
-        ... = id∘f : Pright
-        ... = f : left_id,
-      funext (take x, decidable.rec_on (h ((g∘f) x) x)
-      (λ Peq, Peq)
-      (λ Pne,
-      assert Pfneq : (f∘g∘f) x ≠ f x,
-        from not_imp_not_of_imp (Pinj ((g∘f) x) x) Pne,
-      by rewrite Pid at Pfneq; exact absurd rfl Pfneq))
-
-lemma has_left_inverse_of_left_inv {A B : Type} {g : A → B} {f : B → A} :
-      g ∘ f = id → has_left_inverse f :=
-      assume Peq, exists.intro g (take x, by apply congr Peq; exact rfl)
-
-end function
-
-open function
+open nat list algebra function
 
 namespace group
 open fintype
@@ -52,14 +26,16 @@ variable (perm : injective f)
 
 definition perm_inv : A → A :=
       right_inv (perm_surj perm)
+
 lemma perm_inv_right : f ∘ (perm_inv perm) = id :=
       id_of_right_inv (perm_surj perm)
-lemma perm_inv_left : (perm_inv perm) ∘ f = id :=
-      left_inv_of_right_inv_of_inj perm (perm_inv_right perm)
 
-local attribute has_left_inverse [reducible]
+lemma perm_inv_left : (perm_inv perm) ∘ f = id :=
+      have H : left_inverse f (perm_inv perm), from congr_fun (perm_inv_right perm),
+      funext (take x, right_inverse_of_injective_of_left_inverse perm H x)
+      
 lemma perm_inv_inj : injective (perm_inv perm) :=
-      injective_of_has_left_inverse (has_left_inverse_of_left_inv (perm_inv_right perm))
+      injective_of_has_left_inverse (exists.intro f (congr_fun (perm_inv_right perm)))
       
 end perm
 
