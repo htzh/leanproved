@@ -101,7 +101,7 @@ lemma ker.mul_closed : mul_closed_on (ker f) :=
 lemma ker.normal : same_left_right_coset (ker f) :=
       take a, funext (assume x, begin
       esimp [ker, set_of, glcoset, grcoset],
-      rewrite [*(is_hom f), comm_mul_eq_one (f a⁻¹) (f x)]
+      rewrite [*(is_hom f), mul_eq_one_iff_mul_eq_one (f a⁻¹) (f x)]
       end)
 
 definition ker_is_normal_subgroup : is_normal_subgroup (ker f) :=

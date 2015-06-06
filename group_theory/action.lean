@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 
 Author : Haitao Zhang
 -/
-import algebra.group data .extra .hom .perm .finsubg
+import algebra.group data .hom .perm .finsubg
 
 namespace group
 open finset algebra function

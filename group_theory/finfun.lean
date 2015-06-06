@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 
 Author : Haitao Zhang
 -/
-import data .extra
+import data
 
 open nat function eq.ops
 
@@ -22,7 +22,7 @@ definition cons_all_of (elts : list A) (ls : list (list A)) : list (list A) :=
 lemma pair_of_cons {a} {l} {pr : A × list A} : cons_pair pr = a::l → pr = (a, l) :=
       prod.destruct pr (λ p1 p2, assume Peq, list.no_confusion Peq (by intros; substvars))
 
-lemma cons_pair_inj : has_left_inverse (@cons_pair A) := sorry
+lemma cons_pair_inj : injective (@cons_pair A) := sorry
 lemma nodup_of_cons_all {elts : list A} {ls : list (list A)}
       : nodup elts → nodup ls → nodup (cons_all_of elts ls) :=
       assume Pelts Pls,
@@ -62,6 +62,23 @@ lemma leq_of_mem_all_lists : ∀ {n : nat} {l : list A},
                    by rewrite [length_cons, leq_of_mem_all_lists Pl]
 
 end list_of_lists
+
+section kth
+
+variable {A : Type}
+
+definition kth : ∀ k (l : list A), k < length l → A
+| k []        := begin rewrite length_nil, intro Pltz, exact absurd Pltz !not_lt_zero end
+| 0 (a::l)    := λ P, a
+| (k+1) (a::l):= by rewrite length_cons; intro Plt; exact kth k l (lt_of_succ_lt_succ Plt)
+
+lemma kth_zero_of_cons {a} (l : list A) (P : 0 < length (a::l)) : kth 0 (a::l) P = a :=
+      rfl
+lemma kth_succ_of_cons {a} k (l : list A) (P : k+1 < length (a::l)) : kth (succ k) (a::l) P = kth k l (lt_of_succ_lt_succ P) :=
+      rfl
+
+end kth
+
 end list
 
         
@@ -116,11 +133,10 @@ include deceqA
 definition list_to_fun (l : list B) (leq : length l = card A) : A → B :=
            assume x,
            let k := find x (elements_of A) in
-           have Plt : k < card A, from (find_mem (complete x)),
+           have Plt : k < card A, from (find_lt_length (complete x)),
            have Pltl : k < length l, from leq⁻¹ ▸ Plt,
            kth _ _ Pltl
 
-check @find_mem           
 lemma list_to_fun_apply (l : list B) (leq : length l = card A) (a : A) :
       ∀ P, list_to_fun l leq a = kth (find a (elements_of A)) l P :=
       assume P, rfl
@@ -128,7 +144,7 @@ lemma list_to_fun_apply (l : list B) (leq : length l = card A) (a : A) :
 lemma list_eq_map_list_to_fun [deceqB : decidable_eq B] (l : list B) (leq : length l = card A)
                     : l = map (list_to_fun l leq) (elements_of A) :=
       begin
-        apply eq_of_kth_eq ((len_map (list_to_fun l leq) (elements_of A))⁻¹ ▸ leq),
+        apply eq_of_kth_eq ((length_map (list_to_fun l leq) (elements_of A))⁻¹ ▸ leq),
         intro k Plt Plt2,
         assert Plt1 : k < length (elements_of A), {apply leq ▸ Plt},
         assert Plt3 : find (kth k (elements_of A) Plt1) (elements_of A) < length l,
@@ -167,8 +183,8 @@ lemma found_of_surj {f : A → B} (surj : surjective f) :
       ∀ b, let elts := elems A, k := find b (map f elts) in k < length elts :=
       λ b, let elts := elems A, img := map f elts, k := find b img in
            have Pin : b ∈ img, from mem_map_of_surj surj b,
-           assert Pfound : k < length img, from find_mem (mem_map_of_surj surj b),
-           len_map f elts ▸ Pfound
+           assert Pfound : k < length img, from find_lt_length (mem_map_of_surj surj b),
+           length_map f elts ▸ Pfound
 
 definition right_inv {f : A → B} (surj : surjective f) : B → A :=
            λ b, let elts := elems A, k := find b (map f elts) in

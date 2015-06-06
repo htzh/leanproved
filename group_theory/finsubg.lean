@@ -8,7 +8,7 @@ Author : Haitao Zhang
 -- develop the concept of finite subgroups based on finsets so that the properties
 -- can be used directly without translating from the set based theory first
 
-import data algebra.group data .subgroup .extra
+import data algebra.group data .subgroup
 open function algebra set finset
 -- ⁻¹ in eq.ops conflicts with group ⁻¹
 -- open eq.ops
@@ -88,7 +88,7 @@ lemma fin_lcoset_same (x a : A) : x ∈ (fin_lcoset H a) = (fin_lcoset H x = fin
 lemma fin_mem_lcoset (g : A) : g ∈ fin_lcoset H g :=
       have P : g ∈ g ∘> ts H, from and.left (subg_in_coset_refl g),
       assert P1 : g ∈ ts (fin_lcoset H g), from eq.symm (fin_lcoset_eq g) ▸ P,
-      eq.symm (@mem_eq_mem_to_set _ _ _ g) ▸ P1
+      eq.symm (mem_eq_mem_to_set _ g) ▸ P1
 lemma fin_lcoset_subset {S : finset A} (Psub : S ⊆ H) : ∀ x, x ∈ H → fin_lcoset S x ⊆ H :=
       assert Psubs : set.subset (ts S) (ts H), from subset_eq_to_set_subset S H ▸ Psub,
       take x, assume Pxs : x ∈ ts H,
@@ -98,6 +98,8 @@ lemma fin_lcoset_subset {S : finset A} (Psub : S ⊆ H) : ∀ x, x ∈ H → fin
 variable {G : finset A}
 variable [is_subgG : is_subgroup (to_set G)]
 include is_subgG
+
+open finset.partition
 
 definition fin_lcoset_partition_subg (Psub : H ⊆ G) :=
       partition.mk G (fin_lcoset H) fin_lcoset_same

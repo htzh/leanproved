@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 
 Author : Haitao Zhang
 -/
-import data algebra.group data .extra
+import data algebra.group data
 open function
 -- ⁻¹ in eq.ops conflicts with group ⁻¹
 -- open eq.ops
@@ -43,7 +43,7 @@ lemma lcompose a b (S : set A) : l a (l b S) = l (a*b) S :=
 lemma rcompose a b (S : set A) : r a (r b S) = r (b*a) S :=
       calc (rmul a) '[(rmul b) '[S]] = ((rmul a) ∘ (rmul b)) '[S] : image_compose
       ... = rmul (b*a) '[S] : rmul_compose
-lemma l_sub a (S H : set A) : S ⊆ H → (l a S) ⊆ (l a H) := image_subset S H (lmul a)
+lemma l_sub a (S H : set A) : S ⊆ H → (l a S) ⊆ (l a H) := image_subset (lmul a)
 definition l_same S (a b : A) := l a S = l b S
 definition r_same S (a b : A) := r a S = r b S
 lemma l_same.refl S (a : A) : l_same S a a := rfl
