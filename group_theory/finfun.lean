@@ -22,7 +22,10 @@ definition cons_all_of (elts : list A) (ls : list (list A)) : list (list A) :=
 lemma pair_of_cons {a} {l} {pr : A × list A} : cons_pair pr = a::l → pr = (a, l) :=
       prod.destruct pr (λ p1 p2, assume Peq, list.no_confusion Peq (by intros; substvars))
 
-lemma cons_pair_inj : injective (@cons_pair A) := sorry
+lemma cons_pair_inj : injective (@cons_pair A) :=
+      take p1 p2, assume Pl,
+      prod.eq (list.no_confusion Pl (λ P1 P2, P1)) (list.no_confusion Pl (λ P1 P2, P2))
+
 lemma nodup_of_cons_all {elts : list A} {ls : list (list A)}
       : nodup elts → nodup ls → nodup (cons_all_of elts ls) :=
       assume Pelts Pls,
@@ -236,16 +239,16 @@ lemma fun_eq_list_to_fun_map (f : A → B) : ∀ P, f = list_to_fun (map f (elem
       end)
 
 lemma list_eq_map_list_to_fun  (l : list B) (leq : length l = card A)
-                    : l = map (list_to_fun l leq) (elements_of A) :=
+                    : l = map (list_to_fun l leq) (elems A) :=
       begin
       apply eq_of_kth_eq, rewrite length_map, apply leq,
         intro k Plt Plt2,
-        assert Plt1 : k < length (elements_of A), {apply leq ▸ Plt},
-        assert Plt3 : find (kth k (elements_of A) Plt1) (elems A) < length l,
+        assert Plt1 : k < length (elems A), {apply leq ▸ Plt},
+        assert Plt3 : find (kth k (elems A) Plt1) (elems A) < length l,
           {rewrite leq, apply find_kth},
         rewrite [kth_of_map Plt1 Plt2, list_to_fun_apply l leq _ Plt3],
         generalize Plt3,
-        rewrite [↑elements_of, find_kth_of_nodup Plt1 (unique A)],
+        rewrite [find_kth_of_nodup Plt1 (unique A)],
         intro Plt, exact rfl
       end
 
