@@ -94,18 +94,6 @@ lemma kth_succ_of_cons {a} k (l : list A) (P : k+1 < length (a::l)) :
       kth (succ k) (a::l) P = kth k l (lt_of_succ_lt_succ P) :=
       rfl
 
-end kth
-
-end list
-
-        
-namespace fintype
-open list
-
-section found
-
-variables {A B : Type}
-
 lemma kth_mem : ∀ {k : nat} {l : list A} P, kth k l P ∈ l
 | k []            := assume P, absurd P !not_lt_zero
 | 0 (a::l)        := assume P, by rewrite kth_zero_of_cons; apply mem_cons
@@ -141,7 +129,7 @@ lemma eq_of_kth_eq [deceqA : decidable_eq A]
     end,
   by subst l₁; subst a₁
 
-lemma kth_of_map {f : A → B} :
+lemma kth_of_map {B : Type} {f : A → B} :
       ∀ {k : nat} {l : list A} Plt Pmlt, kth k (map f l) Pmlt = f (kth k l Plt)
 | k []            := assume P, absurd P !not_lt_zero
 | 0 (a::l)        := assume Plt, by
@@ -151,7 +139,7 @@ lemma kth_of_map {f : A → B} :
                   apply kth_of_map 
                   end
 
-lemma kth_find {A : Type} [deceqA : decidable_eq A] :
+lemma kth_find [deceqA : decidable_eq A] :
       ∀ {l : list A} {a} P, kth (find a l) l P = a
 | []            := take a, assume P, absurd P !not_lt_zero
 | (x::l)        := take a, begin
@@ -162,7 +150,7 @@ lemma kth_find {A : Type} [deceqA : decidable_eq A] :
                   apply kth_find
                 end
 
-lemma find_kth {A : Type} [deceqA : decidable_eq A] :
+lemma find_kth [deceqA : decidable_eq A] :
       ∀ {k : nat} {l : list A} P, find (kth k l P) l < length l
 | k []            := assume P, absurd P !not_lt_zero
 | 0 (a::l)        := assume P, begin 
@@ -178,7 +166,7 @@ lemma find_kth {A : Type} [deceqA : decidable_eq A] :
                     rewrite [find_cons_of_ne l Pne], apply succ_lt_succ, apply find_kth
                   end
 
-lemma find_kth_of_nodup {A : Type} [deceqA : decidable_eq A] :
+lemma find_kth_of_nodup [deceqA : decidable_eq A] :
       ∀ {k : nat} {l : list A} P, nodup l → find (kth k l P) l = k
 | k []            := assume P, absurd P !not_lt_zero
 | 0 (a::l)        := assume Plt Pnodup,
@@ -194,6 +182,17 @@ lemma find_kth_of_nodup {A : Type} [deceqA : decidable_eq A] :
                     apply find_kth_of_nodup (lt_of_succ_lt_succ Plt) (nodup_of_nodup_cons Pnodup)
                   end
 
+end kth
+
+end list
+
+        
+namespace fintype
+open list
+
+section found
+
+variables {A B : Type}
 variable [finA : fintype A]
 include finA
 
