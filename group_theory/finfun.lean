@@ -64,8 +64,11 @@ definition perms_of_list : ∀ (l : list A), list (list A)
 lemma insert_all_cons {a b : A} {l : list A} :
       (insert_all a (b::l)) = (a::b::l) :: map (cons b) (insert_all a l) := rfl
 
+lemma nodup_concat_all_of_disjoint_of_all_nodup_of_nodup :
+      ∀ {ls : list (list A)}, nodup ls → (∀ l, l ∈ ls → nodup l) → (∀ l₁ l₂, l₁ ∈ ls → l₂ ∈ ls → l₁ ≠ l₂ → disjoint l₁ l₂) → nodup (concat_all ls) := sorry
+
 lemma nodup_insert_all {a : A} : ∀ {l : list A}, a ∉ l → nodup (insert_all a l)
-| []       := assume Pnin, !nodup_singleton
+| []       := assume P, !nodup_singleton
 | (b::l)   := assume Pnin, obtain Paneb Paninl, from ne_and_not_mem_of_not_mem_cons Pnin,
            nodup_cons (not.intro (assume Pablin,
              obtain t Pt Peq, from exists_of_mem_map Pablin,
@@ -107,6 +110,10 @@ lemma all_nodup_insert_all {a} :
                apply not_mem_of_nodup_cons Pnodup, apply Pt,
                apply all_nodup_insert_all Paninl (nodup_of_nodup_cons Pnodup) Pt 
              end)
+
+lemma nodup_perms_of_nodup : ∀ {l : list A}, nodup l → nodup (perms_of_list l)
+| []       := assume P, !nodup_singleton
+| (a::l)   := assume Pal, sorry
 
 lemma length_insert_all {a : A} : ∀ {l : list A}, length (insert_all a l) = length l + 1
 | []       := rfl
