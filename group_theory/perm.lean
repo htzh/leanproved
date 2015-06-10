@@ -28,7 +28,7 @@ definition perm_inv : A → A :=
       right_inv (perm_surj perm)
 
 lemma perm_inv_right : f ∘ (perm_inv perm) = id :=
-      id_of_right_inv (perm_surj perm)
+      right_inv_of_surj (perm_surj perm)
 
 lemma perm_inv_left : (perm_inv perm) ∘ f = id :=
       have H : left_inverse f (perm_inv perm), from congr_fun (perm_inv_right perm),
@@ -42,7 +42,8 @@ end perm
 structure perm (A : Type) [h : fintype A] : Type :=
   (f : A → A) (inj : injective f)
 local attribute perm.f [coercion]
-    
+check perm.mk
+
 section perm
 variable {A : Type}
 variable [finA : fintype A]
@@ -59,6 +60,23 @@ lemma perm.has_decidable_eq [instance] : decidable_eq (perm A) :=
       decidable.rec_on (decidable_eq_fun ff gf)
       (λ Peq, decidable.inl (by substvars))
       (λ Pne, decidable.inr begin intro P, injection P, contradiction end)))
+
+lemma dinj_perm_mk : dinj (@injective A A) perm.mk :=
+      take a₁ a₂ Pa₁ Pa₂ Pmkeq, perm.no_confusion Pmkeq (λ Pe Pqe, Pe)
+
+definition all_perms : list (perm A) :=
+           dmap injective perm.mk (all_injs A)
+
+lemma nodup_all_perms : nodup (@all_perms A _ _) :=
+      dmap_nodup_of_dinj dinj_perm_mk nodup_all_injs
+
+lemma all_perms_complete : ∀ p : perm A, p ∈ all_perms :=
+      take p, perm.destruct p (take f Pinj,
+        assert Pin : f ∈ all_injs A, from all_injs_complete Pinj,
+        mem_of_dmap Pinj Pin)
+
+definition perm_is_fintype [instance] : fintype (perm A) :=
+           fintype.mk all_perms nodup_all_perms all_perms_complete
 
 definition perm.mul (f g : perm A) :=
            perm.mk (f∘g) (injective_compose (perm.inj f) (perm.inj g))
@@ -83,12 +101,8 @@ lemma perm.right_inv (p : perm A) : p ^ (perm.inv p) = perm.one :=
 
 definition perm_group [instance] : group (perm A) :=
            group.mk perm.mul perm.assoc perm.one perm.one_mul perm.mul_one perm.inv perm.left_inv
-check @perm_group
 
 end perm
 
-section less_than
-
-end less_than
 end group
 
