@@ -83,7 +83,7 @@ theorem hom_map_mul_closed (H : set A) : mul_closed_on H → mul_closed_on (f '[
         f (a1 * a2) = f a1 * f a2 : is_hom f a1 a2
         ... = b1 * f a2 : {and.right Pa1}
         ... = b1 * b2 : {and.right Pa2},
-        in_image Pa1a2 Pb1b2
+        mem_image Pa1a2 Pb1b2
 
 lemma ker.has_one : 1 ∈ ker f := hom_map_one f
 
@@ -114,13 +114,13 @@ variable [is_subgH : is_subgroup H]
 include is_subgH
 
 theorem hom_map_subgroup : is_subgroup (f '[H]) :=
-        have Pone : 1 ∈ f '[H], from in_image subg_has_one (hom_map_one f),
+        have Pone : 1 ∈ f '[H], from mem_image subg_has_one (hom_map_one f),
         have Pclosed : mul_closed_on (f '[H]), from hom_map_mul_closed f H subg_mul_closed,
         assert Pinv : ∀ b, b ∈ f '[H] → b⁻¹ ∈ f '[H], from
           assume b, assume Pimg,
           obtain a (Pa : a ∈ H ∧ f a = b), from Pimg,
           assert Painv : a⁻¹ ∈ H, from subg_has_inv a (and.left Pa),
-          assert Pfainv : (f a)⁻¹ ∈ f '[H], from in_image Painv (hom_map_inv f a),
+          assert Pfainv : (f a)⁻¹ ∈ f '[H], from mem_image Painv (hom_map_inv f a),
           and.right Pa ▸ Pfainv,
         is_subgroup.mk Pone Pclosed Pinv
 
@@ -159,7 +159,8 @@ definition ker_natural_map : (coset_of (ker f)) → B :=
            quot.lift f ker_coset_same_val
 
 example (a : A) : ker_natural_map ⟦a⟧ = f a := rfl
-lemma ker_coset_hom (a b : A) : ker_natural_map (⟦a⟧*⟦b⟧) = (ker_natural_map ⟦a⟧) * (ker_natural_map ⟦b⟧) := calc
+lemma ker_coset_hom (a b : A) :
+      ker_natural_map (⟦a⟧*⟦b⟧) = (ker_natural_map ⟦a⟧) * (ker_natural_map ⟦b⟧) := calc
       ker_natural_map (⟦a⟧*⟦b⟧) = ker_natural_map ⟦a*b⟧ : rfl
       ... = f (a*b) : rfl
       ... = (f a) * (f b) : by rewrite [is_hom f]
@@ -187,5 +188,5 @@ lemma ker_map_is_inj : injective (ker_natural_map : coset_of (ker f) → B) :=
 theorem first_isomorphism_theorem : isomorphic (ker_natural_map : coset_of (ker f) → B) :=
         and.intro ker_map_is_inj ker_map_is_hom
 
-end hom_theorem        
+end hom_theorem
 end group
