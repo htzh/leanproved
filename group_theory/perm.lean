@@ -33,10 +33,10 @@ lemma perm_inv_right : f ∘ (perm_inv perm) = id :=
 lemma perm_inv_left : (perm_inv perm) ∘ f = id :=
       have H : left_inverse f (perm_inv perm), from congr_fun (perm_inv_right perm),
       funext (take x, right_inverse_of_injective_of_left_inverse perm H x)
-      
+
 lemma perm_inv_inj : injective (perm_inv perm) :=
       injective_of_has_left_inverse (exists.intro f (congr_fun (perm_inv_right perm)))
-      
+
 end perm
 
 structure perm (A : Type) [h : fintype A] : Type :=
@@ -73,7 +73,7 @@ lemma nodup_all_perms : nodup (@all_perms A _ _) :=
 lemma all_perms_complete : ∀ p : perm A, p ∈ all_perms :=
       take p, perm.destruct p (take f Pinj,
         assert Pin : f ∈ all_injs A, from all_injs_complete Pinj,
-        mem_of_dmap Pinj Pin)
+        mem_dmap Pinj Pin)
 
 definition perm_is_fintype [instance] : fintype (perm A) :=
            fintype.mk all_perms nodup_all_perms all_perms_complete
@@ -105,4 +105,3 @@ definition perm_group [instance] : group (perm A) :=
 end perm
 
 end group
-

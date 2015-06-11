@@ -389,12 +389,12 @@ lemma all_funs_complete (f : A → B) : f ∈ all_funs :=
       assert Plin : map f (elems A) ∈ all_lists_of_len (card A),
         from mem_all_lists (by rewrite length_map),
       assert Plfin : list_to_fun (map f (elems A)) (length_map_of_fintype f) ∈ all_funs,
-        from mem_of_dmap _ Plin,
+        from mem_dmap _ Plin,
       begin rewrite [fun_eq_list_to_fun_map f (length_map_of_fintype f)], apply Plfin end
 
 lemma all_funs_to_all_lists :
       map fun_to_list (@all_funs A B _ _ _) = all_lists_of_len (card A) :=
-      map_of_dmap_inv_pos list_to_fun_to_list length_mem_all_lists
+      map_dmap_of_pos_of_inv list_to_fun_to_list length_mem_all_lists
 
 lemma length_all_funs : length (@all_funs A B _ _ _) = (card B) ^ (card A) := calc
       length _ = length (map fun_to_list all_funs) : length_map
@@ -498,12 +498,12 @@ lemma all_injs_complete {f : A → A} : injective f → f ∈ (all_injs A) :=
       assert Plin : map f (elems A) ∈ all_nodups_of_len (card A),
         from begin apply mem_all_nodups, apply length_map, apply nodup_of_inj Pinj end,
       assert Plfin : list_to_fun (map f (elems A)) (length_map_of_fintype f) ∈ !all_injs,
-        from mem_of_dmap _ Plin,
+        from mem_dmap _ Plin,
       begin rewrite [fun_eq_list_to_fun_map f (length_map_of_fintype f)], apply Plfin end
 
 open finset
 
-lemma univ_of_nodup_of_leq_univ {l : list A} (n : nodup l) (leq : length l = card A) :
+lemma univ_of_leq_univ_of_nodup {l : list A} (n : nodup l) (leq : length l = card A) :
       to_finset_of_nodup l n = univ :=
        univ_of_card_eq_univ (calc
         finset.card (to_finset_of_nodup l n) = length l : rfl
@@ -519,13 +519,16 @@ lemma inj_of_nodup {f : A → A} :
                                ... = card A : rfl)
 
 lemma inj_of_mem_all_injs {f : A → A} : f ∈ (all_injs A) → injective f :=
-      assume Pfin, sorry
+      assume Pfin, obtain l Pex, from exists_of_mem_dmap Pfin,
+      obtain leq Pin Peq, from Pex,
+      assert Pmap : map f (elems A) = l, from Peq⁻¹ ▸ list_to_fun_to_list l leq,
+      begin apply inj_of_nodup, rewrite Pmap, apply nodup_mem_all_nodups Pin end
 
 lemma perm_of_inj {f : A → A} : injective f → perm (map f (elems A)) (elems A) :=
       assume Pinj,
       assert P1 : univ = to_finset_of_nodup (elems A) (unique A), from rfl,
       assert P2 : to_finset_of_nodup (map f (elems A)) (nodup_of_inj Pinj) = univ,
-        from univ_of_nodup_of_leq_univ _ !length_map,
+        from univ_of_leq_univ_of_nodup _ !length_map,
       quot.exact (P1 ▸ P2)
 
 end perm
