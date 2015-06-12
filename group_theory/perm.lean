@@ -49,6 +49,16 @@ variable {A : Type}
 variable [finA : fintype A]
 include finA
 
+lemma eq_of_feq : ∀ {p₁ p₂ : perm A}, (perm.f p₁) = p₂ → p₁ = p₂
+| (perm.mk f₁ P₁) (perm.mk f₂ P₂) := assume (feq : f₁ = f₂), by congruence; assumption
+
+lemma feq_of_eq : ∀ {p₁ p₂ : perm A}, p₁ = p₂ → (perm.f p₁) = p₂
+| (perm.mk f₁ P₁) (perm.mk f₂ P₂) := assume Peq,
+  have feq : f₁ = f₂, from perm.no_confusion Peq (λ Pe Pqe, Pe), feq
+
+lemma eq_iff_feq {p₁ p₂ : perm A} : (perm.f p₁) = p₂ ↔ p₁ = p₂ :=
+iff.intro eq_of_feq feq_of_eq
+
 definition move_by [reducible] (a : A) (f : perm A) : A := f a
 
 variable [deceqA : decidable_eq A]

@@ -51,6 +51,10 @@ end defs
 section
 variables {A B : Type}
 variable [s1 : group A]
+
+definition id_is_iso [instance] : @is_hom_class A A s1 s1 (@id A) :=
+is_iso_class.mk (take a b, rfl) injective_id
+
 variable [s2 : group B]
 include s1
 include s2

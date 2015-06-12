@@ -201,4 +201,109 @@ theorem orbit_stabilizer_theorem : card H = card (orbit hom H a) * card (stab ho
 
 end orbit_stabilizer
 
+section perm_fin
+open fin nat
+variable {n : nat}
+
+lemma eq_of_veq : ∀ {i j : fin n}, (val i) = j → i = j
+| (mk iv ilt) (mk jv jlt) := assume (veq : iv = jv), begin congruence, assumption end
+
+lemma veq_of_eq : ∀ {i j : fin n}, i = j → (val i) = j
+| (mk iv ilt) (mk jv jlt) := assume Peq,
+  have veq : iv = jv, from fin.no_confusion Peq (λ Pe Pqe, Pe), veq
+
+lemma eq_iff_veq : ∀ {i j : fin n}, (val i) = j ↔ i = j :=
+take i j, iff.intro eq_of_veq veq_of_eq
+
+definition lift_succ : fin n → fin (succ n)
+| (mk v h) := mk v (lt.step h)
+
+definition max [reducible] : fin (succ n) :=
+mk n !lt_succ_self
+
+lemma ne_max_of_lt_max {i : fin (succ n)} : i < n → i ≠ max := sorry
+lemma lt_max_of_ne_max {i : fin (succ n)} : i ≠ max → i < n := sorry
+lemma lift_succ_ne_max (i : fin n) : lift_succ i ≠ max := sorry
+
+lemma lift_succ_inj : injective (@lift_succ n) :=
+take i j, destruct i (destruct j (take iv ilt jv jlt Pmkeq,
+  begin congruence, apply fin.no_confusion Pmkeq, intros, assumption end))
+
+lemma lt_of_inj_max (f : fin (succ n) → fin (succ n)) :
+  injective f → (f max = max) → ∀ i, i < n → f i < n :=
+assume Pinj Peq, take i, assume Pilt,
+assert P1 : f i = f max → i = max, from assume Peq, Pinj i max Peq,
+have P : f i ≠ max, from
+     begin rewrite -Peq, intro P2, apply absurd (P1 P2) (ne_max_of_lt_max Pilt) end,
+lt_max_of_ne_max P
+
+definition lift_fun : (fin n → fin n) → (fin (succ n) → fin (succ n)) :=
+take fn i, dite (i = max) (λ Pe, max)(λ Pne, lift_succ (fn (mk i (lt_max_of_ne_max Pne))))
+
+definition lower_inj (f : fin (succ n) → fin (succ n)) (inj : injective f) :
+  f max = max → fin n → fin n :=
+assume Peq, take i, mk (f (lift_succ i)) (lt_of_inj_max f inj Peq (lift_succ i) (lt_max_of_ne_max (lift_succ_ne_max _)))
+
+lemma lift_fun_max {f : fin n → fin n} : lift_fun f max = max :=
+begin rewrite [↑lift_fun, dif_pos rfl] end
+
+lemma lift_fun_of_inj {f : fin n → fin n} : injective f → injective (lift_fun f) := sorry
+
+lemma lift_fun_inj : injective (@lift_fun n) := sorry
+
+lemma lower_inj_apply {f Pinj Pmax} (i : fin n) : val (lower_inj f Pinj Pmax i) = val (f (lift_succ i)) := sorry
+
+definition lift_perm (p : perm (fin n)) : perm (fin (succ n)) :=
+perm.mk (lift_fun p) (lift_fun_of_inj (perm.inj p))
+
+definition lower_perm (p : perm (fin (succ n))) (P : p max = max) : perm (fin n) :=
+perm.mk (lower_inj p (perm.inj p) P)
+  (take i j, begin
+  rewrite [-eq_iff_veq, *lower_inj_apply, eq_iff_veq],
+  apply injective_compose (perm.inj p) lift_succ_inj
+  end)
+
+lemma lift_lower_eq {p : perm (fin (succ n))} (P : p max = max) :
+  lift_perm (lower_perm p P) = p := sorry
+
+lemma lift_perm_inj : injective (@lift_perm n) :=
+take p1 p2, assume Peq, eq_of_feq (lift_fun_inj (feq_of_eq Peq))
+
+lemma lift_perm_inj_on_univ : set.inj_on (@lift_perm n) (ts univ) :=
+eq.symm to_set_univ ▸ iff.elim_left set.injective_iff_inj_on_univ lift_perm_inj
+
+lemma lift_to_stab : image (@lift_perm n) univ = stab id univ max :=
+ext (take (pp : perm (fin (succ n))), iff.intro
+  (assume Pimg, obtain p P_ Pp, from exists_of_mem_image Pimg,
+  assert Ppp : pp max = max, from calc
+    pp max = lift_perm p max : {eq.symm Pp}
+       ... = lift_fun p max : rfl
+       ... = max : lift_fun_max,
+  mem_filter_of_mem !mem_univ Ppp)
+  (assume Pstab,
+  assert Ppp : pp max = max, from of_mem_filter Pstab,
+  mem_image_of_mem_of_eq !mem_univ (lift_lower_eq Ppp)))
+
+lemma orbit_max : orbit (@id (perm (fin (succ n)))) univ max = univ := sorry
+
+lemma card_orbit_max : card (orbit (@id (perm (fin (succ n)))) univ max) = succ n :=
+calc card (orbit (@id (perm (fin (succ n)))) univ max) = card univ : {orbit_max}
+                                                   ... = succ n : card_fin (succ n)
+
+open fintype
+
+lemma card_lift_to_stab : card (stab (@id (perm (fin (succ n)))) univ max) = card (perm (fin n)) :=
+ calc finset.card (stab (@id (perm (fin (succ n)))) univ max)
+    = finset.card (image (@lift_perm n) univ) : {eq.symm lift_to_stab}
+... = card univ : card_image_eq_of_inj_on lift_perm_inj_on_univ
+
+lemma card_perm_step : card (perm (fin (succ n))) = (succ n) * card (perm (fin n)) :=
+ calc card (perm (fin (succ n)))
+    = card (orbit id univ max) * card (stab id univ max) : orbit_stabilizer_theorem
+... = (succ n) * card (stab id univ max) : {card_orbit_max}
+... = (succ n) * fintype.card (perm (fin n)) : {card_lift_to_stab}
+
+
+end perm_fin
+
 end group

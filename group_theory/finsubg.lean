@@ -31,8 +31,10 @@ structure is_finsubg [class] (H : finset G) : Type :=
           (has_one : 1 ∈ H)
           (mul_closed : finset_mul_closed_on H)
           (has_inv : finset_has_inv H)
-set_option pp.full_names true
-check @is_finsubg 
+
+check @finset.univ
+definition univ_is_finsubg [instance] [finG : fintype G] : is_finsubg (@finset.univ G _) :=
+is_finsubg.mk !mem_univ (λ x y Px Py, !mem_univ) (λ a Pa, !mem_univ)
 
 lemma finsubg_has_one (H : finset G) [h : is_finsubg H] : 1 ∈ H :=
       @is_finsubg.has_one G _ H h
