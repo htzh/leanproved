@@ -281,7 +281,7 @@ assert vne  : val i ≠ n, from
     absurd (eq_of_veq vivm) hne,
 lt_of_le_of_ne (le_of_lt_succ visn) vne
 
-lemma lift_succ_ne_max (i : fin n) : lift_succ i ≠ max :=
+lemma lift_succ_ne_max {i : fin n} : lift_succ i ≠ max :=
 begin
   cases i with v hlt, esimp [lift_succ, lift, max], intro he,
   injection he, substvars,
@@ -305,7 +305,7 @@ definition lift_fun : (fin n → fin n) → (fin (succ n) → fin (succ n)) :=
 
 definition lower_inj (f : fin (succ n) → fin (succ n)) (inj : injective f) :
   f max = max → fin n → fin n :=
-assume Peq, take i, mk (f (lift_succ i)) (lt_of_inj_max f inj Peq (lift_succ i) (lt_max_of_ne_max (lift_succ_ne_max _)))
+assume Peq, take i, mk (f (lift_succ i)) (lt_of_inj_max f inj Peq (lift_succ i) (lt_max_of_ne_max lift_succ_ne_max))
 
 lemma lift_fun_max {f : fin n → fin n} : lift_fun f max = max :=
 begin rewrite [↑lift_fun, dif_pos rfl] end
@@ -313,6 +313,13 @@ begin rewrite [↑lift_fun, dif_pos rfl] end
 lemma lift_fun_of_ne_max {f : fin n → fin n} {i} (Pne : i ≠ max) :
   lift_fun f i = lift_succ (f (mk i (lt_max_of_ne_max Pne))) :=
 begin rewrite [↑lift_fun, dif_neg Pne] end
+
+lemma lift_fun_eq {f : fin n → fin n} {i : fin n} :
+  lift_fun f (lift_succ i) = lift_succ (f i) :=
+begin
+rewrite [lift_fun_of_ne_max lift_succ_ne_max], congruence, congruence,
+rewrite [-eq_iff_veq, val_mk, ↑lift_succ, -val_lift]
+end
 
 lemma lift_fun_of_inj {f : fin n → fin n} : injective f → injective (lift_fun f) :=
 assume Pinj, take i j,
@@ -322,19 +329,19 @@ begin
     cases Pdj with Pjmax Pjnmax,
       substvars, intros, exact rfl,
       substvars, rewrite [lift_fun_max, lift_fun_of_ne_max Pjnmax],
-        intro Plmax, apply absurd Plmax⁻¹ !lift_succ_ne_max,
+        intro Plmax, apply absurd Plmax⁻¹ lift_succ_ne_max,
     cases Pdj with Pjmax Pjnmax,
       substvars, rewrite [lift_fun_max, lift_fun_of_ne_max Pinmax],
-        intro Plmax, apply absurd Plmax !lift_succ_ne_max,
+        intro Plmax, apply absurd Plmax lift_succ_ne_max,
       rewrite [lift_fun_of_ne_max Pinmax, lift_fun_of_ne_max Pjnmax],
-      rewrite [-eq_iff_veq, ↑lift_succ, -val_lift, -val_lift, eq_iff_veq],
-      intro Peq, rewrite [-eq_iff_veq],
-      assert P1 : mk (val i) (lt_max_of_ne_max Pinmax) = mk (val j) (lt_max_of_ne_max Pjnmax), exact Pinj Peq,
-      revert P1,
-      rewrite [-eq_iff_veq, *val_mk], intros, assumption
+        intro Peq, rewrite [-eq_iff_veq],
+        exact veq_of_eq (Pinj (lift_succ_inj Peq))
 end
 
-lemma lift_fun_inj : injective (@lift_fun n) := sorry
+lemma lift_fun_inj : injective (@lift_fun n) :=
+take f₁ f₂ Peq, funext (λ i,
+assert Peqi : lift_fun f₁ (lift_succ i) = lift_fun f₂ (lift_succ i), from congr_fun Peq _,
+begin revert Peqi, rewrite [*lift_fun_eq], apply lift_succ_inj end)
 
 lemma lower_inj_apply {f Pinj Pmax} (i : fin n) :
   val (lower_inj f Pinj Pmax i) = val (f (lift_succ i)) :=
