@@ -433,20 +433,32 @@ section zn
 open nat fin eq.ops
 variable {n : nat}
 
+lemma val_mod : ∀ i : fin (succ n), (val i) mod (succ n) = val i
+| (mk iv ilt) := by rewrite [*val_mk, mod_eq_of_lt ilt]
+
 definition minv : ∀ i : fin (succ n), fin (succ n)
 | (mk iv ilt) := mk ((succ n - iv) mod succ n) (mod_lt _ !zero_lt_succ)
 
 lemma madd_comm (i j : fin (succ n)) : madd i j = madd j i :=
 by apply eq_of_veq; rewrite [*val_madd, add.comm (val i)]
 
+lemma zero_madd (i : fin (succ n)) : madd (zero n) i = i :=
+by apply eq_of_veq; rewrite [val_madd, ↑zero, nat.zero_add, mod_eq_of_lt (is_lt i)]
+
+lemma madd_zero (i : fin (succ n)) : madd i (zero n) = i :=
+!madd_comm ▸ zero_madd i
+
 lemma madd_assoc (i j k : fin (succ n)) : madd (madd i j) k = madd i (madd j k) :=
 by apply eq_of_veq; rewrite [*val_madd, mod_add_mod, add_mod_mod, add.assoc (val i)]
 
 lemma madd_left_inv : ∀ i : fin (succ n), madd (minv i) i = zero n
 | (mk iv ilt) := eq_of_veq begin
-  check_expr @sub_add_cancel (succ n) iv (le_of_lt ilt),
-  rewrite [val_madd, ↑minv, ↑zero, mod_add_mod, sub_add_cancel (@le_of_lt iv (succ n) ilt), mod_self]
+  rewrite [val_madd, ↑minv, ↑zero, mod_add_mod, sub_add_cancel (nat.le_of_lt ilt), mod_self]
   end
 
+definition madd_is_comm_group [instance] : add_comm_group (fin (succ n)) :=
+add_comm_group.mk madd madd_assoc (zero n) zero_madd madd_zero minv madd_left_inv madd_comm
+
+example (i j : fin (succ n)) : i + j = j + i := add.comm i j
 end zn
 end group
