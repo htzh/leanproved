@@ -213,6 +213,9 @@ lemma sub_lt_succ (a b : nat) : a - b < succ a := lt_succ_of_le (sub_le a b)
 variable {n : nat}
 
 lemma mod_eq_of_add_mod_eq : ∀ (i j₁ j₂ : nat), (i + j₁) mod n = (i + j₂) mod n → j₁ mod n  = j₂ mod n := sorry
+lemma mod_add_mod : ∀ (i j : nat), (i mod n + j) mod n = (i + j) mod n := sorry
+lemma add_mod_mod (i j : nat) : (i + j mod n) mod n = (i + j) mod n :=
+by rewrite [add.comm i, mod_add_mod, add.comm j]
 
 lemma eq_of_veq : ∀ {i j : fin n}, (val i) = j → i = j
 | (mk iv ilt) (mk jv jlt) := assume (veq : iv = jv), begin congruence, assumption end
@@ -238,6 +241,9 @@ definition max_sub : fin (succ n) → fin (succ n)
 
 definition sub_max : fin (succ n) → fin (succ n)
 | (mk iv ilt) := mk (succ iv mod (succ n)) (mod_lt _ !zero_lt_succ)
+
+lemma val_madd : ∀ i j : fin (succ n), val (madd i j) = (i + j) mod (succ n)
+| (mk iv ilt) (mk jv jlt) := by rewrite [val_mk]
 
 lemma madd_inj : ∀ {i : fin (succ n)}, injective (madd i)
 | (mk iv ilt) :=
@@ -423,4 +429,24 @@ lemma card_perm_step : card (perm (fin (succ n))) = (succ n) * card (perm (fin n
 
 end perm_fin
 
+section zn
+open nat fin eq.ops
+variable {n : nat}
+
+definition minv : ∀ i : fin (succ n), fin (succ n)
+| (mk iv ilt) := mk ((succ n - iv) mod succ n) (mod_lt _ !zero_lt_succ)
+
+lemma madd_comm (i j : fin (succ n)) : madd i j = madd j i :=
+by apply eq_of_veq; rewrite [*val_madd, add.comm (val i)]
+
+lemma madd_assoc (i j k : fin (succ n)) : madd (madd i j) k = madd i (madd j k) :=
+by apply eq_of_veq; rewrite [*val_madd, mod_add_mod, add_mod_mod, add.assoc (val i)]
+
+lemma madd_left_inv : ∀ i : fin (succ n), madd (minv i) i = zero n
+| (mk iv ilt) := eq_of_veq begin
+  check_expr @sub_add_cancel (succ n) iv (le_of_lt ilt),
+  rewrite [val_madd, ↑minv, ↑zero, mod_add_mod, sub_add_cancel (@le_of_lt iv (succ n) ilt), mod_self]
+  end
+
+end zn
 end group
