@@ -204,9 +204,6 @@ end orbit_stabilizer
 section perm_fin
 open fin nat eq.ops
 
-definition madd : ∀ {n : nat} (i j : fin n), fin n
-| 0 (mk iv ilt) _ := absurd ilt !not_lt_zero
-| (succ n) (mk iv ilt) (mk jv jlt) := mk ((iv + jv) mod (succ n)) (mod_lt _ !zero_lt_succ)
 
 lemma sub_lt_succ (a b : nat) : a - b < succ a := lt_succ_of_le (sub_le a b)
 
@@ -217,33 +214,8 @@ lemma mod_add_mod : ∀ (i j : nat), (i mod n + j) mod n = (i + j) mod n := sorr
 lemma add_mod_mod (i j : nat) : (i + j mod n) mod n = (i + j) mod n :=
 by rewrite [add.comm i, mod_add_mod, add.comm j]
 
-lemma eq_of_veq : ∀ {i j : fin n}, (val i) = j → i = j
-| (mk iv ilt) (mk jv jlt) := assume (veq : iv = jv), begin congruence, assumption end
-
-lemma veq_of_eq : ∀ {i j : fin n}, i = j → (val i) = j
-| (mk iv ilt) (mk jv jlt) := assume Peq,
-  have veq : iv = jv, from fin.no_confusion Peq (λ Pe Pqe, Pe), veq
-
-lemma eq_iff_veq : ∀ {i j : fin n}, (val i) = j ↔ i = j :=
-take i j, iff.intro eq_of_veq veq_of_eq
-
-definition val_inj := @eq_of_veq n
-
-
-definition lift_succ (i : fin n) : fin (nat.succ n) :=
-lift i 1
-
-definition max [reducible] : fin (succ n) :=
-mk n !lt_succ_self
-
 definition max_sub : fin (succ n) → fin (succ n)
 | (mk iv ilt) := mk (n - iv) (sub_lt_succ n _)
-
-definition sub_max : fin (succ n) → fin (succ n)
-| (mk iv ilt) := mk (succ iv mod (succ n)) (mod_lt _ !zero_lt_succ)
-
-lemma val_madd : ∀ i j : fin (succ n), val (madd i j) = (i + j) mod (succ n)
-| (mk iv ilt) (mk jv jlt) := by rewrite [val_mk]
 
 lemma madd_inj : ∀ {i : fin (succ n)}, injective (madd i)
 | (mk iv ilt) :=
@@ -254,17 +226,17 @@ take j₁ j₂, fin.destruct j₁ (fin.destruct j₂ (λ jv₁ jlt₁ jv₂ jlt�
   apply mod_eq_of_add_mod_eq iv _ _ Peq
 end))
 
-lemma madd_max_sub_eq_max : ∀ i : fin (succ n), madd (max_sub i) i = max
+lemma madd_max_sub_eq_max : ∀ i : fin (succ n), madd (max_sub i) i = maxi
 | (mk iv ilt) := begin
-  esimp [madd, max_sub, max],
+  esimp [madd, max_sub, maxi],
   congruence,
   rewrite [@sub_add_cancel n iv (le_of_lt_succ ilt), mod_eq_of_lt !lt_succ_self]
   end
 
-lemma madd_sub_max_eq : ∀ i : fin (succ n), madd (sub_max i) max = i
+lemma madd_sub_max_eq : ∀ i : fin (succ n), madd (sub_max i) maxi = i
 | (mk iv ilt) :=
   assert Pd : decidable (iv = n), from _, begin
-  esimp [madd, sub_max, max],
+  esimp [madd, sub_max, maxi],
   congruence,
   cases Pd with Pe Pne,
     rewrite [Pe, mod_self, zero_add n, mod_eq_of_lt !lt_succ_self],
@@ -274,81 +246,6 @@ lemma madd_sub_max_eq : ∀ i : fin (succ n), madd (sub_max i) max = i
     rewrite [(mod_eq_of_lt Plt), succ_add, -add_succ, add_mod_self, mod_eq_of_lt ilt]
   end
 
-lemma ne_max_of_lt_max {i : fin (succ n)} : i < n → i ≠ max :=
-by intro hlt he; substvars; exact absurd hlt (lt.irrefl n)
-
-lemma lt_max_of_ne_max {i : fin (succ n)} : i ≠ max → i < n :=
-assume hne  : i ≠ max,
-assert visn : val i < nat.succ n, from val_lt i,
-assert aux  : val (@max n) = n,   from rfl,
-assert vne  : val i ≠ n, from
-  assume he,
-    have vivm : val i = val (@max n), from he ⬝ aux⁻¹,
-    absurd (eq_of_veq vivm) hne,
-lt_of_le_of_ne (le_of_lt_succ visn) vne
-
-lemma lift_succ_ne_max {i : fin n} : lift_succ i ≠ max :=
-begin
-  cases i with v hlt, esimp [lift_succ, lift, max], intro he,
-  injection he, substvars,
-  exact absurd hlt (lt.irrefl v)
-end
-
-lemma lift_succ_inj : injective (@lift_succ n) :=
-take i j, destruct i (destruct j (take iv ilt jv jlt Pmkeq,
-  begin congruence, apply fin.no_confusion Pmkeq, intros, assumption end))
-
-lemma lt_of_inj_max (f : fin (succ n) → fin (succ n)) :
-  injective f → (f max = max) → ∀ i, i < n → f i < n :=
-assume Pinj Peq, take i, assume Pilt,
-assert P1 : f i = f max → i = max, from assume Peq, Pinj i max Peq,
-have P : f i ≠ max, from
-     begin rewrite -Peq, intro P2, apply absurd (P1 P2) (ne_max_of_lt_max Pilt) end,
-lt_max_of_ne_max P
-
-definition lift_fun : (fin n → fin n) → (fin (succ n) → fin (succ n)) :=
-λ f i, dite (i = max) (λ Pe, max) (λ Pne, lift_succ (f (mk i (lt_max_of_ne_max Pne))))
-
-definition lower_inj (f : fin (succ n) → fin (succ n)) (inj : injective f) :
-  f max = max → fin n → fin n :=
-assume Peq, take i, mk (f (lift_succ i)) (lt_of_inj_max f inj Peq (lift_succ i) (lt_max_of_ne_max lift_succ_ne_max))
-
-lemma lift_fun_max {f : fin n → fin n} : lift_fun f max = max :=
-begin rewrite [↑lift_fun, dif_pos rfl] end
-
-lemma lift_fun_of_ne_max {f : fin n → fin n} {i} (Pne : i ≠ max) :
-  lift_fun f i = lift_succ (f (mk i (lt_max_of_ne_max Pne))) :=
-begin rewrite [↑lift_fun, dif_neg Pne] end
-
-lemma lift_fun_eq {f : fin n → fin n} {i : fin n} :
-  lift_fun f (lift_succ i) = lift_succ (f i) :=
-begin
-rewrite [lift_fun_of_ne_max lift_succ_ne_max], congruence, congruence,
-rewrite [-eq_iff_veq, val_mk, ↑lift_succ, -val_lift]
-end
-
-lemma lift_fun_of_inj {f : fin n → fin n} : injective f → injective (lift_fun f) :=
-assume Pinj, take i j,
-assert Pdi : decidable (i = max), from _, assert Pdj : decidable (j = max), from _,
-begin
-  cases Pdi with Pimax Pinmax,
-    cases Pdj with Pjmax Pjnmax,
-      substvars, intros, exact rfl,
-      substvars, rewrite [lift_fun_max, lift_fun_of_ne_max Pjnmax],
-        intro Plmax, apply absurd Plmax⁻¹ lift_succ_ne_max,
-    cases Pdj with Pjmax Pjnmax,
-      substvars, rewrite [lift_fun_max, lift_fun_of_ne_max Pinmax],
-        intro Plmax, apply absurd Plmax lift_succ_ne_max,
-      rewrite [lift_fun_of_ne_max Pinmax, lift_fun_of_ne_max Pjnmax],
-        intro Peq, rewrite [-eq_iff_veq],
-        exact veq_of_eq (Pinj (lift_succ_inj Peq))
-end
-
-lemma lift_fun_inj : injective (@lift_fun n) :=
-take f₁ f₂ Peq, funext (λ i,
-assert Peqi : lift_fun f₁ (lift_succ i) = lift_fun f₂ (lift_succ i), from congr_fun Peq _,
-begin revert Peqi, rewrite [*lift_fun_eq], apply lift_succ_inj end)
-
 lemma lower_inj_apply {f Pinj Pmax} (i : fin n) :
   val (lower_inj f Pinj Pmax i) = val (f (lift_succ i)) :=
 by rewrite [↑lower_inj]
@@ -356,20 +253,20 @@ by rewrite [↑lower_inj]
 definition lift_perm (p : perm (fin n)) : perm (fin (succ n)) :=
 perm.mk (lift_fun p) (lift_fun_of_inj (perm.inj p))
 
-definition lower_perm (p : perm (fin (succ n))) (P : p max = max) : perm (fin n) :=
+definition lower_perm (p : perm (fin (succ n))) (P : p maxi = maxi) : perm (fin n) :=
 perm.mk (lower_inj p (perm.inj p) P)
   (take i j, begin
   rewrite [-eq_iff_veq, *lower_inj_apply, eq_iff_veq],
   apply injective_compose (perm.inj p) lift_succ_inj
   end)
 
-lemma lift_lower_eq : ∀ {p : perm (fin (succ n))} (P : p max = max),
+lemma lift_lower_eq : ∀ {p : perm (fin (succ n))} (P : p maxi = maxi),
   lift_perm (lower_perm p P) = p
 | (perm.mk pf Pinj) := assume Pmax, begin
   rewrite [↑lift_perm], congruence,
   apply funext, intro i,
-  assert Pfmax : pf max = max, apply Pmax,
-  assert Pd : decidable (i = max),
+  assert Pfmax : pf maxi = maxi, apply Pmax,
+  assert Pd : decidable (i = maxi),
     exact _,
     cases Pd with Pe Pne,
       rewrite [Pe, Pfmax], apply lift_fun_max,
@@ -384,22 +281,22 @@ take p1 p2, assume Peq, eq_of_feq (lift_fun_inj (feq_of_eq Peq))
 lemma lift_perm_inj_on_univ : set.inj_on (@lift_perm n) (ts univ) :=
 eq.symm to_set_univ ▸ iff.elim_left set.injective_iff_inj_on_univ lift_perm_inj
 
-lemma lift_to_stab : image (@lift_perm n) univ = stab id univ max :=
+lemma lift_to_stab : image (@lift_perm n) univ = stab id univ maxi :=
 ext (take (pp : perm (fin (succ n))), iff.intro
   (assume Pimg, obtain p P_ Pp, from exists_of_mem_image Pimg,
-  assert Ppp : pp max = max, from calc
-    pp max = lift_perm p max : {eq.symm Pp}
-       ... = lift_fun p max : rfl
-       ... = max : lift_fun_max,
+  assert Ppp : pp maxi = maxi, from calc
+    pp maxi = lift_perm p maxi : {eq.symm Pp}
+        ... = lift_fun p maxi : rfl
+        ... = maxi : lift_fun_max,
   mem_filter_of_mem !mem_univ Ppp)
   (assume Pstab,
-  assert Ppp : pp max = max, from of_mem_filter Pstab,
+  assert Ppp : pp maxi = maxi, from of_mem_filter Pstab,
   mem_image_of_mem_of_eq !mem_univ (lift_lower_eq Ppp)))
 
 definition move_from_max_to (i : fin (succ n)) : perm (fin (succ n)) :=
 perm.mk (madd (sub_max i)) madd_inj
 
-lemma orbit_max : orbit (@id (perm (fin (succ n)))) univ max = univ :=
+lemma orbit_max : orbit (@id (perm (fin (succ n)))) univ maxi = univ :=
 ext (take i, iff.intro
   (assume P, !mem_univ)
   (assume P, begin
@@ -409,21 +306,21 @@ ext (take i, iff.intro
       apply madd_sub_max_eq
     end))
 
-lemma card_orbit_max : card (orbit (@id (perm (fin (succ n)))) univ max) = succ n :=
-calc card (orbit (@id (perm (fin (succ n)))) univ max) = card univ : {orbit_max}
-                                                   ... = succ n : card_fin (succ n)
+lemma card_orbit_max : card (orbit (@id (perm (fin (succ n)))) univ maxi) = succ n :=
+calc card (orbit (@id (perm (fin (succ n)))) univ maxi) = card univ : {orbit_max}
+                                                    ... = succ n : card_fin (succ n)
 
 open fintype
 
-lemma card_lift_to_stab : card (stab (@id (perm (fin (succ n)))) univ max) = card (perm (fin n)) :=
- calc finset.card (stab (@id (perm (fin (succ n)))) univ max)
+lemma card_lift_to_stab : card (stab (@id (perm (fin (succ n)))) univ maxi) = card (perm (fin n)) :=
+ calc finset.card (stab (@id (perm (fin (succ n)))) univ maxi)
     = finset.card (image (@lift_perm n) univ) : {eq.symm lift_to_stab}
 ... = card univ : card_image_eq_of_inj_on lift_perm_inj_on_univ
 
 lemma card_perm_step : card (perm (fin (succ n))) = (succ n) * card (perm (fin n)) :=
  calc card (perm (fin (succ n)))
-    = card (orbit id univ max) * card (stab id univ max) : orbit_stabilizer_theorem
-... = (succ n) * card (stab id univ max) : {card_orbit_max}
+    = card (orbit id univ maxi) * card (stab id univ maxi) : orbit_stabilizer_theorem
+... = (succ n) * card (stab id univ maxi) : {card_orbit_max}
 ... = (succ n) * card (perm (fin n)) : {card_lift_to_stab}
 
 
