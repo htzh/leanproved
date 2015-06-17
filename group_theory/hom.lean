@@ -27,7 +27,7 @@ include s1
 include s2
 
 -- the Prop of being hom
-definition homomorphic (f : A → B) : Prop := ∀ a b, f (a*b) = (f a)*(f b)
+definition homomorphic [reducible] (f : A → B) : Prop := ∀ a b, f (a*b) = (f a)*(f b)
 -- type class for inference
 structure is_hom_class [class] (f : A → B) : Type :=
           (is_hom : homomorphic f)

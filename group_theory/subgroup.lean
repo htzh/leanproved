@@ -75,7 +75,7 @@ open algebra
   end ops
 end group
 
-namespace algebra    
+namespace algebra
 open group.ops
 section
 variable {A : Type}
@@ -102,7 +102,7 @@ lemma conj_inv_cancel (g : A) : ∀ a, g⁻¹ ∘c g ∘c a = a :=
       assume a, calc
       g⁻¹ ∘c g ∘c a = g⁻¹*g ∘c a : conj_compose
       ... = 1 ∘c a : mul.left_inv
-      ... = a : conj_id 
+      ... = a : conj_id
 lemma is_conj.refl (a : A) : a ~ a := exists.intro 1 (conj_id a)
 lemma is_conj.symm (a b : A) : a ~ b → b ~ a :=
       assume Pab, obtain x (Pconj : x ∘c b = a), from Pab,
@@ -117,6 +117,9 @@ lemma is_conj.trans (a b c : A) : a ~ b → b ~ c → a ~ c :=
       ... = x ∘c b : Py
       ... = a : Px)
 
+lemma lmul_inj (a : A) : injective (lmul_by a) :=
+take x₁ x₂ Peq, by esimp [lmul_by] at Peq;
+  rewrite [-(inv_mul_cancel_left a x₁), -(inv_mul_cancel_left a x₂), Peq]
 lemma lmul_inv_on (a : A) (H : set A) : left_inv_on (lmul_by a⁻¹) (lmul_by a) H :=
       take x Px, show a⁻¹*(a*x) = x, by rewrite inv_mul_cancel_left
 lemma lmul_inj_on (a : A) (H : set A) : inj_on (lmul_by a) H :=
@@ -137,7 +140,7 @@ lemma glcoset_eq_lcoset a (H : set A) : a ∘> H = coset.l a H :=
           assume P2, obtain x_1 P3, from P2,
           have P4 : a * x_1 = x, from and.right P3,
           have P5 : x_1 = a⁻¹ * x, from eq_inv_mul_of_mul_eq P4,
-          eq.subst P5 (and.left P3)  
+          eq.subst P5 (and.left P3)
       end
 lemma grcoset_eq_rcoset a (H : set A) : H <∘ a = coset.r a H :=
       begin
@@ -292,7 +295,7 @@ lemma subg_same_lcoset_in_lcoset (a b : A) : same_lcoset H a b → in_lcoset H a
 lemma subg_lcoset_same (a b : A) : in_lcoset H a b = (a∘>H = b∘>H) :=
       propext(iff.intro (subg_in_lcoset_same_lcoset a b) (subg_same_lcoset_in_lcoset a b))
 lemma subg_rcoset_same (a b : A) : in_rcoset H a b = (H<∘a = H<∘b) :=
-      propext(iff.intro 
+      propext(iff.intro
       (assume Pa_in_b : H (a*b⁻¹),
       have Pabinv : H<∘a*b⁻¹ = H, from subgroup_rcoset_id (a*b⁻¹) Pa_in_b,
       have Pabinv_b : H <∘ a*b⁻¹ <∘ b = H <∘ b, from Pabinv ▸ rfl,
@@ -416,4 +419,3 @@ end quotient
 end group
 
 end algebra
-

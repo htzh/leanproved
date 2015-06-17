@@ -8,7 +8,7 @@ Author : Haitao Zhang
 -- develop the concept of finite subgroups based on finsets so that the properties
 -- can be used directly without translating from the set based theory first
 
-import data algebra.group data .subgroup
+import data algebra.group algebra.group_power data .subgroup .finfun
 open function algebra set finset
 -- ⁻¹ in eq.ops conflicts with group ⁻¹
 -- open eq.ops
@@ -115,5 +115,9 @@ theorem lagrange_theorem (Psub : H ⊆ G) : card G = card (fin_lcosets H G) * ca
         ... = card (fin_lcosets H G) * card H : Sum_const_eq_card_mul
 
 end lagrange
+
+section generator
+
+end generator
 
 end group

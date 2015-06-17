@@ -201,6 +201,38 @@ theorem orbit_stabilizer_theorem : card H = card (orbit hom H a) * card (stab ho
 
 end orbit_stabilizer
 
+section cayley
+variables {G : Type}
+variable [ambientG : group G]
+include ambientG
+variable [finG : fintype G]
+include finG
+
+definition action_by_lmul : G → perm G :=
+take g, perm.mk (lmul_by g) (lmul_inj g)
+
+variable [deceqG : decidable_eq G]
+include deceqG
+
+lemma action_by_lmul_hom : homomorphic (@action_by_lmul G _ _) :=
+take g₁ (g₂ : G), eq.symm (calc
+      action_by_lmul g₁ * action_by_lmul g₂
+    = perm.mk ((lmul_by g₁)∘(lmul_by g₂)) _ : rfl
+... = perm.mk (lmul_by (g₁*g₂)) _ : by congruence; apply coset.lmul_compose)
+
+lemma action_by_lmul_inj : injective (@action_by_lmul G _ _) :=
+take g₁ g₂, assume Peq, perm.no_confusion Peq
+  (λ Pfeq Pqeq,
+  have Pappeq : g₁*1 = g₂*1, from congr_fun Pfeq _,
+  calc g₁ = g₁ * 1 : mul_one
+      ... = g₂ * 1 : Pappeq
+      ... = g₂ : mul_one)
+
+definition action_by_lmul_is_iso [instance] : is_iso_class (@action_by_lmul G _ _) :=
+is_iso_class.mk action_by_lmul_hom action_by_lmul_inj
+
+end cayley
+
 section perm_fin
 open fin nat eq.ops
 
