@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 
 Author : Haitao Zhang
 -/
-import data
+import data algebra.group
 open fin nat function eq.ops
 
 namespace migration
@@ -30,9 +30,6 @@ lift i 1
 
 definition maxi [reducible] : fin (succ n) :=
 mk n !lt_succ_self
-
-definition sub_max : fin (succ n) → fin (succ n)
-| (mk iv ilt) := mk (succ iv mod (succ n)) (mod_lt _ !zero_lt_succ)
 
 lemma ne_max_of_lt_max {i : fin (succ n)} : i < n → i ≠ maxi :=
 by intro hlt he; substvars; exact absurd hlt (lt.irrefl n)
@@ -109,19 +106,92 @@ take f₁ f₂ Peq, funext (λ i,
 assert Peqi : lift_fun f₁ (lift_succ i) = lift_fun f₂ (lift_succ i), from congr_fun Peq _,
 begin revert Peqi, rewrite [*lift_fun_eq], apply lift_succ_inj end)
 
+lemma lower_inj_apply {f Pinj Pmax} (i : fin n) :
+  val (lower_inj f Pinj Pmax i) = val (f (lift_succ i)) :=
+by rewrite [↑lower_inj]
+
 definition madd (i j : fin (succ n)) : fin (succ n) :=
 mk ((i + j) mod (succ n)) (mod_lt _ !zero_lt_succ)
 
 lemma val_madd : ∀ i j : fin (succ n), val (madd i j) = (i + j) mod (succ n)
 | (mk iv ilt) (mk jv jlt) := by rewrite [val_mk]
 
+lemma madd_inj : ∀ {i : fin (succ n)}, injective (madd i)
+| (mk iv ilt) :=
+take j₁ j₂, fin.destruct j₁ (fin.destruct j₂ (λ jv₁ jlt₁ jv₂ jlt₂, begin
+  rewrite [↑madd, -eq_iff_veq],
+  intro Peq, congruence,
+  rewrite [-(mod_eq_of_lt jlt₁), -(mod_eq_of_lt jlt₂)],
+  apply mod_eq_mod_of_add_mod_eq_add_mod_left Peq
+end))
+
 end
+
+section zn
+open nat fin eq.ops algebra
+variable {n : nat}
+
+lemma val_mod : ∀ i : fin (succ n), (val i) mod (succ n) = val i
+| (mk iv ilt) := by rewrite [*val_mk, mod_eq_of_lt ilt]
+
+definition minv : ∀ i : fin (succ n), fin (succ n)
+| (mk iv ilt) := mk ((succ n - iv) mod succ n) (mod_lt _ !zero_lt_succ)
+
+lemma madd_comm (i j : fin (succ n)) : madd i j = madd j i :=
+by apply eq_of_veq; rewrite [*val_madd, add.comm (val i)]
+
+lemma zero_madd (i : fin (succ n)) : madd (zero n) i = i :=
+by apply eq_of_veq; rewrite [val_madd, ↑zero, nat.zero_add, mod_eq_of_lt (is_lt i)]
+
+lemma madd_zero (i : fin (succ n)) : madd i (zero n) = i :=
+!madd_comm ▸ zero_madd i
+
+lemma madd_assoc (i j k : fin (succ n)) : madd (madd i j) k = madd i (madd j k) :=
+by apply eq_of_veq; rewrite [*val_madd, mod_add_mod, add_mod_mod, add.assoc (val i)]
+
+lemma madd_left_inv : ∀ i : fin (succ n), madd (minv i) i = zero n
+| (mk iv ilt) := eq_of_veq (by
+  rewrite [val_madd, ↑minv, ↑zero, mod_add_mod, sub_add_cancel (nat.le_of_lt ilt), mod_self])
+
+definition madd_is_comm_group [instance] : add_comm_group (fin (succ n)) :=
+add_comm_group.mk madd madd_assoc (zero n) zero_madd madd_zero minv madd_left_inv madd_comm
+
+example (i j : fin (succ n)) : i + j = j + i := add.comm i j
+end zn
 
 section unused
 
 definition madd₁ : ∀ {n : nat} (i j : fin n), fin n
 | 0 (mk iv ilt) _ := absurd ilt !not_lt_zero
 | (succ n) (mk iv ilt) (mk jv jlt) := mk ((iv + jv) mod (succ n)) (mod_lt _ !zero_lt_succ)
+
+variable {n : nat}
+-- these become trivial once the group operation of madd is established
+definition max_sub : fin (succ n) → fin (succ n)
+| (mk iv ilt) := mk (n - iv) (sub_lt_succ n _)
+
+definition sub_max : fin (succ n) → fin (succ n)
+| (mk iv ilt) := mk (succ iv mod (succ n)) (mod_lt _ !zero_lt_succ)
+
+lemma madd_max_sub_eq_max : ∀ i : fin (succ n), madd (max_sub i) i = maxi
+| (mk iv ilt) := begin
+  esimp [madd, max_sub, maxi],
+  congruence,
+  rewrite [@sub_add_cancel n iv (le_of_lt_succ ilt), mod_eq_of_lt !lt_succ_self]
+  end
+
+lemma madd_sub_max_eq : ∀ i : fin (succ n), madd (sub_max i) maxi = i
+| (mk iv ilt) :=
+  assert Pd : decidable (iv = n), from _, begin
+  esimp [madd, sub_max, maxi],
+  congruence,
+  cases Pd with Pe Pne,
+    rewrite [Pe, mod_self, zero_add n, mod_eq_of_lt !lt_succ_self],
+    assert Plt : succ iv < succ n,
+      apply succ_lt_succ, exact lt_of_le_and_ne (le_of_lt_succ ilt) Pne,
+    check_expr mod_eq_of_lt Plt,
+    rewrite [(mod_eq_of_lt Plt), succ_add, -add_succ, add_mod_self, mod_eq_of_lt ilt]
+  end
 
 end unused
 

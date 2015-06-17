@@ -204,51 +204,7 @@ end orbit_stabilizer
 section perm_fin
 open fin nat eq.ops
 
-
-lemma sub_lt_succ (a b : nat) : a - b < succ a := lt_succ_of_le (sub_le a b)
-
 variable {n : nat}
-
-lemma mod_eq_of_add_mod_eq : ∀ (i j₁ j₂ : nat), (i + j₁) mod n = (i + j₂) mod n → j₁ mod n  = j₂ mod n := sorry
-lemma mod_add_mod : ∀ (i j : nat), (i mod n + j) mod n = (i + j) mod n := sorry
-lemma add_mod_mod (i j : nat) : (i + j mod n) mod n = (i + j) mod n :=
-by rewrite [add.comm i, mod_add_mod, add.comm j]
-
-definition max_sub : fin (succ n) → fin (succ n)
-| (mk iv ilt) := mk (n - iv) (sub_lt_succ n _)
-
-lemma madd_inj : ∀ {i : fin (succ n)}, injective (madd i)
-| (mk iv ilt) :=
-take j₁ j₂, fin.destruct j₁ (fin.destruct j₂ (λ jv₁ jlt₁ jv₂ jlt₂, begin
-  rewrite [↑madd, -eq_iff_veq],
-  intro Peq, congruence,
-  rewrite [-(mod_eq_of_lt jlt₁), -(mod_eq_of_lt jlt₂)],
-  apply mod_eq_of_add_mod_eq iv _ _ Peq
-end))
-
-lemma madd_max_sub_eq_max : ∀ i : fin (succ n), madd (max_sub i) i = maxi
-| (mk iv ilt) := begin
-  esimp [madd, max_sub, maxi],
-  congruence,
-  rewrite [@sub_add_cancel n iv (le_of_lt_succ ilt), mod_eq_of_lt !lt_succ_self]
-  end
-
-lemma madd_sub_max_eq : ∀ i : fin (succ n), madd (sub_max i) maxi = i
-| (mk iv ilt) :=
-  assert Pd : decidable (iv = n), from _, begin
-  esimp [madd, sub_max, maxi],
-  congruence,
-  cases Pd with Pe Pne,
-    rewrite [Pe, mod_self, zero_add n, mod_eq_of_lt !lt_succ_self],
-    assert Plt : succ iv < succ n,
-      apply succ_lt_succ, exact lt_of_le_and_ne (le_of_lt_succ ilt) Pne,
-    check_expr mod_eq_of_lt Plt,
-    rewrite [(mod_eq_of_lt Plt), succ_add, -add_succ, add_mod_self, mod_eq_of_lt ilt]
-  end
-
-lemma lower_inj_apply {f Pinj Pmax} (i : fin n) :
-  val (lower_inj f Pinj Pmax i) = val (f (lift_succ i)) :=
-by rewrite [↑lower_inj]
 
 definition lift_perm (p : perm (fin n)) : perm (fin (succ n)) :=
 perm.mk (lift_fun p) (lift_fun_of_inj (perm.inj p))
@@ -294,7 +250,7 @@ ext (take (pp : perm (fin (succ n))), iff.intro
   mem_image_of_mem_of_eq !mem_univ (lift_lower_eq Ppp)))
 
 definition move_from_max_to (i : fin (succ n)) : perm (fin (succ n)) :=
-perm.mk (madd (sub_max i)) madd_inj
+perm.mk (madd (i - maxi)) madd_inj
 
 lemma orbit_max : orbit (@id (perm (fin (succ n)))) univ maxi = univ :=
 ext (take i, iff.intro
@@ -303,7 +259,7 @@ ext (take i, iff.intro
     apply mem_image_of_mem_of_eq,
       apply mem_image_of_mem_of_eq,
         apply mem_univ (move_from_max_to i), apply rfl,
-      apply madd_sub_max_eq
+      apply sub_add_cancel
     end))
 
 lemma card_orbit_max : card (orbit (@id (perm (fin (succ n)))) univ maxi) = succ n :=
@@ -323,39 +279,5 @@ lemma card_perm_step : card (perm (fin (succ n))) = (succ n) * card (perm (fin n
 ... = (succ n) * card (stab id univ maxi) : {card_orbit_max}
 ... = (succ n) * card (perm (fin n)) : {card_lift_to_stab}
 
-
 end perm_fin
-
-section zn
-open nat fin eq.ops
-variable {n : nat}
-
-lemma val_mod : ∀ i : fin (succ n), (val i) mod (succ n) = val i
-| (mk iv ilt) := by rewrite [*val_mk, mod_eq_of_lt ilt]
-
-definition minv : ∀ i : fin (succ n), fin (succ n)
-| (mk iv ilt) := mk ((succ n - iv) mod succ n) (mod_lt _ !zero_lt_succ)
-
-lemma madd_comm (i j : fin (succ n)) : madd i j = madd j i :=
-by apply eq_of_veq; rewrite [*val_madd, add.comm (val i)]
-
-lemma zero_madd (i : fin (succ n)) : madd (zero n) i = i :=
-by apply eq_of_veq; rewrite [val_madd, ↑zero, nat.zero_add, mod_eq_of_lt (is_lt i)]
-
-lemma madd_zero (i : fin (succ n)) : madd i (zero n) = i :=
-!madd_comm ▸ zero_madd i
-
-lemma madd_assoc (i j k : fin (succ n)) : madd (madd i j) k = madd i (madd j k) :=
-by apply eq_of_veq; rewrite [*val_madd, mod_add_mod, add_mod_mod, add.assoc (val i)]
-
-lemma madd_left_inv : ∀ i : fin (succ n), madd (minv i) i = zero n
-| (mk iv ilt) := eq_of_veq begin
-  rewrite [val_madd, ↑minv, ↑zero, mod_add_mod, sub_add_cancel (nat.le_of_lt ilt), mod_self]
-  end
-
-definition madd_is_comm_group [instance] : add_comm_group (fin (succ n)) :=
-add_comm_group.mk madd madd_assoc (zero n) zero_madd madd_zero minv madd_left_inv madd_comm
-
-example (i j : fin (succ n)) : i + j = j + i := add.comm i j
-end zn
 end group
