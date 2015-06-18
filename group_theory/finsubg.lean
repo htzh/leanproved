@@ -122,6 +122,12 @@ definition mk_mod (n i : nat) : fin (succ n) :=
 mk (i mod (succ n)) (mod_lt _ !zero_lt_succ)
 
 variable {A : Type}
+
+open list
+lemma zero_lt_length_of_mem {a : A} : ∀ {l : list A}, a ∈ l → 0 < length l
+| []     := assume Pinnil, by contradiction
+| (b::l) := assume Pin, !zero_lt_succ
+
 variable [ambG : group A]
 include ambG
 
@@ -137,35 +143,69 @@ calc a ^ n = a ^ (n div m * m + n mod m) : {eq_div_mul_add_mod n m}
        ... = 1 * a ^ (n mod m) : {Pm}
        ... = a ^ (n mod m) : !one_mul
 
+lemma pow_madd {a : A} {n : nat} {i j : fin (succ n)} :
+  a^(succ n) = 1 → a^(val (i + j)) = a^i * a^j :=
+assume Pe, calc
+a^(val (i + j)) = a^((i + j) mod (succ n)) : rfl
+            ... = a^(i + j) : pow_mod Pe
+            ... = a^i * a^j : !pow_add
+
+lemma mk_pow_mod {a : A} {n m : nat} : a ^ (succ m) = 1 → a ^ n = a ^ (mk_mod m n) :=
+assume Pe, pow_mod Pe
+
 variable [finA : fintype A]
 include finA
-variable [deceqA : decidable_eq A]
-include deceqA
 
 open fintype
 
-lemma order_lt_card (a : A) : ∃ n, n > 0 ∧ n ≤ card A ∧ a ^ n = 1 := sorry
+lemma card_pos : 0 < card A :=
+  zero_lt_length_of_mem (mem_univ 1)
+
+variable [deceqA : decidable_eq A]
+include deceqA
+
+lemma order_lt_card (a : A) : ∃ n, n < card A ∧ a ^ (succ n) = 1 := sorry
 
 definition cyc (a : A) : finset A := {x ∈ univ | bex (card A) (λ n, a ^ n = x)}
 
 lemma cyc_mul_closed (a : A) : finset_mul_closed_on (cyc a) :=
 take g h, assume Pgin Phin,
-obtain n Pngz Ple Pe, from order_lt_card a,
+obtain n Plt Pe, from order_lt_card a,
 obtain i Pilt Pig, from of_mem_filter Pgin,
 obtain j Pjlt Pjh, from of_mem_filter Phin,
 begin
   rewrite [-Pig, -Pjh, -pow_add, pow_mod Pe],
   apply mem_filter_of_mem !mem_univ,
-  existsi ((i + j) mod n), apply and.intro,
-    apply nat.lt_of_lt_of_le (mod_lt (i+j) Pngz) Ple,
+  existsi ((i + j) mod (succ n)), apply and.intro,
+    apply nat.lt_of_lt_of_le (mod_lt (i+j) !zero_lt_succ) (succ_le_of_lt Plt),
     apply rfl
 end
 
 lemma cyc_has_inv (a : A) : finset_has_inv (cyc a) :=
 take g, assume Pgin,
-obtain n Pngz Ple Pe, from order_lt_card a,
+obtain n Plt Pe, from order_lt_card a,
 obtain i Pilt Pig, from of_mem_filter Pgin,
-assert Pinv : _, from _, _
+let ni := -(mk_mod n i) in
+assert Pinv : g*a^ni = 1, by
+  rewrite [-Pig, mk_pow_mod Pe, -(pow_madd Pe), add.right_inv],
+begin
+  rewrite [inv_eq_of_mul_eq_one Pinv],
+  apply mem_filter_of_mem !mem_univ,
+  existsi ni, apply and.intro,
+    apply nat.lt_of_lt_of_le (is_lt ni) (succ_le_of_lt Plt),
+    apply rfl
+end
+
+lemma cyc_has_one (a : A) : 1 ∈ cyc a :=
+begin
+  apply mem_filter_of_mem !mem_univ,
+  existsi 0, apply and.intro,
+    apply card_pos,
+    apply pow_zero
+end
+
+definition cyc_is_finsubg [instance] (a : A) : is_finsubg (cyc a) :=
+is_finsubg.mk (cyc_has_one a) (cyc_mul_closed a) (cyc_has_inv a)
 
 end cyclic
 
