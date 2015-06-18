@@ -11,8 +11,7 @@ Author : Haitao Zhang
 import data algebra.group algebra.group_power data .subgroup .finfun
 open function algebra set finset
 -- ⁻¹ in eq.ops conflicts with group ⁻¹
--- open eq.ops
-local notation H1 ▸ H2 := eq.subst H1 H2
+open eq.ops
 
 namespace group
 open ops
@@ -116,8 +115,58 @@ theorem lagrange_theorem (Psub : H ⊆ G) : card G = card (fin_lcosets H G) * ca
 
 end lagrange
 
-section generator
+section cyclic
+open nat fin
 
-end generator
+definition mk_mod (n i : nat) : fin (succ n) :=
+mk (i mod (succ n)) (mod_lt _ !zero_lt_succ)
+
+variable {A : Type}
+variable [ambG : group A]
+include ambG
+
+lemma pow_mod {a : A} {n m : nat} : a ^ m = 1 → a ^ n = a ^ (n mod m) :=
+assume Pid,
+have Pm : a ^ (n div m * m) = 1, from calc
+  a ^ (n div m * m) = a ^ (m * (n div m)) : {mul.comm (n div m) m}
+                ... = (a ^ m) ^ (n div m) : !pow_mul
+                ... = 1 ^ (n div m) : {Pid}
+                ... = 1 : one_pow (n div m),
+calc a ^ n = a ^ (n div m * m + n mod m) : {eq_div_mul_add_mod n m}
+       ... = a ^ (n div m * m) * a ^ (n mod m) : !pow_add
+       ... = 1 * a ^ (n mod m) : {Pm}
+       ... = a ^ (n mod m) : !one_mul
+
+variable [finA : fintype A]
+include finA
+variable [deceqA : decidable_eq A]
+include deceqA
+
+open fintype
+
+lemma order_lt_card (a : A) : ∃ n, n > 0 ∧ n ≤ card A ∧ a ^ n = 1 := sorry
+
+definition cyc (a : A) : finset A := {x ∈ univ | bex (card A) (λ n, a ^ n = x)}
+
+lemma cyc_mul_closed (a : A) : finset_mul_closed_on (cyc a) :=
+take g h, assume Pgin Phin,
+obtain n Pngz Ple Pe, from order_lt_card a,
+obtain i Pilt Pig, from of_mem_filter Pgin,
+obtain j Pjlt Pjh, from of_mem_filter Phin,
+begin
+  rewrite [-Pig, -Pjh, -pow_add, pow_mod Pe],
+  apply mem_filter_of_mem !mem_univ,
+  existsi ((i + j) mod n), apply and.intro,
+    apply nat.lt_of_lt_of_le (mod_lt (i+j) Pngz) Ple,
+    apply rfl
+end
+
+lemma cyc_has_inv (a : A) : finset_has_inv (cyc a) :=
+take g, assume Pgin,
+obtain n Pngz Ple Pe, from order_lt_card a,
+obtain i Pilt Pig, from of_mem_filter Pgin,
+assert Pinv : _, from _, _
+
+end cyclic
 
 end group
