@@ -121,6 +121,15 @@ open nat fin
 definition mk_mod (n i : nat) : fin (succ n) :=
 mk (i mod (succ n)) (mod_lt _ !zero_lt_succ)
 
+definition diff [reducible] (i j : nat) :=
+if (i < j) then (j - i) else (i - j)
+
+lemma diff_eq_max_sub_min {i j : nat} : diff i j = (max i j) - min i j := sorry
+lemma diff_le_max {i j : nat} : diff i j ≤ max i j :=
+  begin rewrite diff_eq_max_sub_min, apply sub_le end
+lemma diff_gt_zero_of_ne {i j : nat} : i ≠ j → diff i j > 0 := sorry
+lemma max_lt_of_lt_of_lt {i j n : nat} : i < n → j < n → max i j < n := sorry
+
 variable {A : Type}
 
 open list
@@ -143,6 +152,18 @@ calc a ^ n = a ^ (n div m * m + n mod m) : {eq_div_mul_add_mod n m}
        ... = 1 * a ^ (n mod m) : {Pm}
        ... = a ^ (n mod m) : !one_mul
 
+lemma pow_sub_eq_one_of_pow_eq {a : A} {i j : nat} :
+  a^i = a^j → a^(i - j) = 1 :=
+assume Pe, or.elim (lt_or_ge i j)
+  (assume Piltj, begin rewrite [sub_eq_zero_of_le (nat.le_of_lt Piltj)] end)
+  (assume Pigej, begin rewrite [pow_sub a Pigej, Pe, mul.right_inv] end)
+
+lemma pow_diff_eq_one_of_pow_eq {a : A} {i j : nat} :
+  a^i = a^j → a^(diff i j) = 1 :=
+assume Pe, decidable.by_cases
+  (λ Plt : i < j, by rewrite [if_pos Plt]; exact pow_sub_eq_one_of_pow_eq (eq.symm Pe))
+  (λ Pnlt : ¬ i < j, by rewrite [if_neg Pnlt]; exact pow_sub_eq_one_of_pow_eq Pe)
+
 lemma pow_madd {a : A} {n : nat} {i j : fin (succ n)} :
   a^(succ n) = 1 → a^(val (i + j)) = a^i * a^j :=
 assume Pe, calc
@@ -164,7 +185,22 @@ lemma card_pos : 0 < card A :=
 variable [deceqA : decidable_eq A]
 include deceqA
 
-lemma order_lt_card (a : A) : ∃ n, n < card A ∧ a ^ (succ n) = 1 := sorry
+lemma order_lt_card (a : A) : ∃ n, n < card A ∧ a ^ (succ n) = 1 :=
+let f := (λ i : fin (succ (card A)), a ^ i) in
+assert Pninj : ¬(injective f), from assume Pinj,
+  absurd (card_le_of_inj _ _ (exists.intro f Pinj))
+    (begin rewrite [card_fin], apply not_succ_le_self end),
+obtain i₁ P₁, from exists_not_of_not_forall Pninj,
+obtain i₂ P₂, from exists_not_of_not_forall P₁,
+obtain Pfe Pne, from iff.elim_left not_implies_iff_and_not P₂,
+assert Pvne : val i₁ ≠ val i₂, from assume Pveq, absurd (eq_of_veq Pveq) Pne,
+exists.intro (pred (diff i₁ i₂)) (begin
+  rewrite [succ_pred_of_pos (diff_gt_zero_of_ne Pvne)], apply and.intro,
+    apply lt_of_succ_lt_succ,
+    rewrite [succ_pred_of_pos (diff_gt_zero_of_ne Pvne)],
+    apply nat.lt_of_le_of_lt diff_le_max (max_lt_of_lt_of_lt (is_lt i₁) (is_lt i₂)),
+    apply pow_diff_eq_one_of_pow_eq Pfe
+  end)
 
 definition cyc (a : A) : finset A := {x ∈ univ | bex (card A) (λ n, a ^ n = x)}
 
