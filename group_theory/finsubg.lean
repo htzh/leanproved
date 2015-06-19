@@ -240,8 +240,13 @@ begin
     apply pow_zero
 end
 
+definition order (a : A) := card (cyc a)
+
 definition cyc_is_finsubg [instance] (a : A) : is_finsubg (cyc a) :=
 is_finsubg.mk (cyc_has_one a) (cyc_mul_closed a) (cyc_has_inv a)
+
+lemma order_dvd_group_order (a : A) : order a ∣ card A :=
+dvd.intro (eq.symm (!mul.comm ▸ lagrange_theorem (subset_univ (cyc a))))
 
 end cyclic
 
