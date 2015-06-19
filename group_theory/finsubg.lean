@@ -199,7 +199,7 @@ lemma card_pos : 0 < card A :=
 variable [deceqA : decidable_eq A]
 include deceqA
 
-lemma order_lt_card (a : A) : ∃ n, n < card A ∧ a ^ (succ n) = 1 :=
+lemma pred_order_lt_card (a : A) : ∃ n, n < card A ∧ a ^ (succ n) = 1 :=
 let f := (λ i : fin (succ (card A)), a ^ i) in
 assert Pninj : ¬(injective f), from assume Pinj,
   absurd (card_le_of_inj _ _ (exists.intro f Pinj))
@@ -220,7 +220,7 @@ definition cyc (a : A) : finset A := {x ∈ univ | bex (card A) (λ n, a ^ n = x
 
 lemma cyc_mul_closed (a : A) : finset_mul_closed_on (cyc a) :=
 take g h, assume Pgin Phin,
-obtain n Plt Pe, from order_lt_card a,
+obtain n Plt Pe, from pred_order_lt_card a,
 obtain i Pilt Pig, from of_mem_filter Pgin,
 obtain j Pjlt Pjh, from of_mem_filter Phin,
 begin
@@ -233,7 +233,7 @@ end
 
 lemma cyc_has_inv (a : A) : finset_has_inv (cyc a) :=
 take g, assume Pgin,
-obtain n Plt Pe, from order_lt_card a,
+obtain n Plt Pe, from pred_order_lt_card a,
 obtain i Pilt Pig, from of_mem_filter Pgin,
 let ni := -(mk_mod n i) in
 assert Pinv : g*a^ni = 1, by
@@ -254,7 +254,26 @@ begin
     apply pow_zero
 end
 
+lemma self_mem_cyc (a : A) : a ∈ cyc a := sorry
+lemma mem_cyc (a : A) : ∀ {n : nat}, a^n ∈ cyc a
+| 0        := cyc_has_one a
+| (succ n) :=
+  begin rewrite pow_succ, apply cyc_mul_closed a, exact mem_cyc, apply self_mem_cyc end
+
 definition order (a : A) := card (cyc a)
+
+set_option pp.all true
+lemma order_le {a : A} {n : nat} : a^(succ n) = 1 → order a ≤ succ n :=
+assume Pe, let s := image (pow a) (upto (succ n)) in
+assert Psub: cyc a ⊆ s, from subset_of_forall
+  (take g, assume Pgin, obtain i Pilt Pig, from of_mem_filter Pgin, begin
+  rewrite [-Pig, pow_mod Pe],
+  apply mem_image_of_mem_of_eq,
+    apply mem_upto_of_lt (mod_lt i !zero_lt_succ),
+    exact rfl end),
+calc order a ≤ card s : card_le_card_of_subset Psub
+         ... ≤ card (upto (succ n)) : !card_image_le
+         ... = succ n : card_upto (succ n)
 
 definition cyc_is_finsubg [instance] (a : A) : is_finsubg (cyc a) :=
 is_finsubg.mk (cyc_has_one a) (cyc_mul_closed a) (cyc_has_inv a)
@@ -262,6 +281,7 @@ is_finsubg.mk (cyc_has_one a) (cyc_mul_closed a) (cyc_has_inv a)
 lemma order_dvd_group_order (a : A) : order a ∣ card A :=
 dvd.intro (eq.symm (!mul.comm ▸ lagrange_theorem (subset_univ (cyc a))))
 
+lemma pow_order (a : A) : a^(order a) = 1 := sorry
 end cyclic
 
 end group
