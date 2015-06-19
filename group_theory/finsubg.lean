@@ -124,11 +124,25 @@ mk (i mod (succ n)) (mod_lt _ !zero_lt_succ)
 definition diff [reducible] (i j : nat) :=
 if (i < j) then (j - i) else (i - j)
 
-lemma diff_eq_max_sub_min {i j : nat} : diff i j = (max i j) - min i j := sorry
+lemma diff_eq_max_sub_min {i j : nat} : diff i j = (max i j) - min i j :=
+decidable.by_cases
+  (λ Plt : i < j, begin rewrite [↑max, ↑min, *(if_pos Plt)] end)
+  (λ Pnlt : ¬ i < j, begin rewrite [↑max, ↑min, *(if_neg Pnlt)] end)
+
 lemma diff_le_max {i j : nat} : diff i j ≤ max i j :=
-  begin rewrite diff_eq_max_sub_min, apply sub_le end
-lemma diff_gt_zero_of_ne {i j : nat} : i ≠ j → diff i j > 0 := sorry
-lemma max_lt_of_lt_of_lt {i j n : nat} : i < n → j < n → max i j < n := sorry
+begin rewrite diff_eq_max_sub_min, apply sub_le end
+
+lemma diff_gt_zero_of_ne {i j : nat} : i ≠ j → diff i j > 0 :=
+assume Pne, decidable.by_cases
+  (λ Plt : i < j, begin rewrite [if_pos Plt], apply sub_pos_of_lt Plt end)
+  (λ Pnlt : ¬ i < j, begin
+    rewrite [if_neg Pnlt], apply sub_pos_of_lt,
+    apply lt_of_le_and_ne (nat.le_of_not_gt Pnlt) (ne.symm Pne) end)
+
+lemma max_lt_of_lt_of_lt {i j n : nat} : i < n → j < n → max i j < n :=
+assume Pilt Pjlt, decidable.by_cases
+  (λ Plt : i < j, by rewrite [↑max, if_pos Plt]; exact Pjlt)
+  (λ Pnlt : ¬ i < j, by rewrite [↑max, if_neg Pnlt]; exact Pilt)
 
 variable {A : Type}
 
