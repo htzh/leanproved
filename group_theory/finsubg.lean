@@ -139,6 +139,9 @@ decidable.by_cases
 lemma diff_succ {i j : nat} : diff (succ i) (succ j) = diff i j :=
 by rewrite [*diff_eq_dist, ↑dist, *succ_sub_succ]
 
+lemma diff_add {i j k : nat} : diff (i + k) (j + k) = diff i j :=
+by rewrite [*diff_eq_dist, dist_add_add_right]
+
 lemma diff_le_max {i j : nat} : diff i j ≤ max i j :=
 begin rewrite diff_eq_max_sub_min, apply sub_le end
 
@@ -234,9 +237,9 @@ definition cyc (a : A) : finset A := {x ∈ univ | bex (succ (card A)) (λ n, a 
 
 definition order (a : A) := card (cyc a)
 
-definition pow_fin (a : A) (i : fin (order a)) := pow a (succ i)
+definition pow_fin (a : A) (n : nat) (i : fin (order a)) := pow a (i + n)
 
-definition cyc_pow_fin (a : A) : finset A := image (pow_fin a) univ
+definition cyc_pow_fin (a : A) (n : nat) : finset A := image (pow_fin a n) univ
 
 lemma order_le_group_order {a : A} : order a ≤ card A :=
 card_le_card_of_subset !subset_univ
@@ -305,26 +308,24 @@ lemma zero_of_pow {a : A} : ∀ {n : nat}, a^n = 1 → n < order a → n = 0
 | 0        := assume Pe Plt, rfl
 | (succ n) := assume Pe Plt, absurd Pe (pow_ne_of_lt_order Plt)
 
-lemma pow_fin_inj (a : A) : injective (pow_fin a) :=
-take i j, assume Peq : a^(succ i) = a^(succ j),
-have Pde : a^(diff i j) = 1, from diff_succ ▸ pow_diff_eq_one_of_pow_eq Peq,
+lemma pow_fin_inj (a : A) (n : nat) : injective (pow_fin a n) :=
+take i j, assume Peq : a^(i + n) = a^(j + n),
+have Pde : a^(diff i j) = 1, from diff_add ▸ pow_diff_eq_one_of_pow_eq Peq,
 have Pdz : diff i j = 0, from zero_of_pow Pde
   (nat.lt_of_le_of_lt diff_le_max (max_lt_of_lt_of_lt (is_lt i) (is_lt j))),
 eq_of_veq (eq_of_dist_eq_zero (diff_eq_dist ▸ Pdz))
 
-lemma cyc_eq_cyc (a : A) : cyc_pow_fin a = cyc a :=
-assert Psub : cyc_pow_fin a ⊆ cyc a, from subset_of_forall
+lemma cyc_eq_cyc (a : A) (n : nat) : cyc_pow_fin a n = cyc a :=
+assert Psub : cyc_pow_fin a n ⊆ cyc a, from subset_of_forall
   (take g, assume Pgin,
-  obtain i Pin Pig, from exists_of_mem_image Pgin,
-  mem_filter_of_mem !mem_univ (exists.intro (succ i) (and.intro
-    (succ_lt_succ (nat.lt_of_lt_of_le (is_lt i) order_le_group_order)) Pig))),
+  obtain i Pin Pig, from exists_of_mem_image Pgin, by rewrite [-Pig]; apply mem_cyc),
 eq_of_card_eq_of_subset (begin apply eq.trans,
     apply card_image_eq_of_inj_on,
-      rewrite [to_set_univ, -injective_iff_inj_on_univ], exact pow_fin_inj a,
+      rewrite [to_set_univ, -injective_iff_inj_on_univ], exact pow_fin_inj a n,
     rewrite [card_fin] end) Psub
 
 lemma pow_order (a : A) : a^(order a) = 1 :=
-obtain i Pin Pone, from exists_of_mem_image (eq.symm (cyc_eq_cyc a) ▸ cyc_has_one a),
+obtain i Pin Pone, from exists_of_mem_image (eq.symm (cyc_eq_cyc a 1) ▸ cyc_has_one a),
 or.elim (eq_or_lt_of_le (succ_le_of_lt (is_lt i)))
   (assume P, P ▸ Pone) (assume P, absurd Pone (pow_ne_of_lt_order P))
 
