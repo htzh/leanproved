@@ -209,10 +209,7 @@ lemma card_pos : 0 < card A :=
 variable [deceqA : decidable_eq A]
 include deceqA
 
-lemma eq_of_card_eq_of_subset {s₁ s₂ : finset A} :
-  card s₁ = card s₂ → s₁ ⊆ s₂ → s₁ = s₂ := sorry
-
-lemma pred_order_lt_card (a : A) : ∃ n, n < card A ∧ a ^ (succ n) = 1 :=
+lemma exists_pow_eq_one (a : A) : ∃ n, n < card A ∧ a ^ (succ n) = 1 :=
 let f := (λ i : fin (succ (card A)), a ^ i) in
 assert Pninj : ¬(injective f), from assume Pinj,
   absurd (card_le_of_inj _ _ (exists.intro f Pinj))
@@ -229,13 +226,32 @@ exists.intro (pred (diff i₁ i₂)) (begin
     apply pow_diff_eq_one_of_pow_eq Pfe
   end)
 
+-- Another possibility is to generate a list of powers and use find to get the first
+-- unity.
 -- The bound on bex is arbitrary as long as it is large enough (at least card A). Making
--- it larger simplifies some proofs, such as a ∈ cyc a
+-- it larger simplifies some proofs, such as a ∈ cyc a.
 definition cyc (a : A) : finset A := {x ∈ univ | bex (succ (card A)) (λ n, a ^ n = x)}
+
+definition order (a : A) := card (cyc a)
+
+definition pow_fin (a : A) (i : fin (order a)) := pow a (succ i)
+
+definition cyc_pow_fin (a : A) : finset A := image (pow_fin a) univ
+
+lemma order_le_group_order {a : A} : order a ≤ card A :=
+card_le_card_of_subset !subset_univ
+
+lemma cyc_has_one (a : A) : 1 ∈ cyc a :=
+begin
+  apply mem_filter_of_mem !mem_univ,
+  existsi 0, apply and.intro,
+    apply zero_lt_succ,
+    apply pow_zero
+end
 
 lemma cyc_mul_closed (a : A) : finset_mul_closed_on (cyc a) :=
 take g h, assume Pgin Phin,
-obtain n Plt Pe, from pred_order_lt_card a,
+obtain n Plt Pe, from exists_pow_eq_one a,
 obtain i Pilt Pig, from of_mem_filter Pgin,
 obtain j Pjlt Pjh, from of_mem_filter Phin,
 begin
@@ -248,7 +264,7 @@ end
 
 lemma cyc_has_inv (a : A) : finset_has_inv (cyc a) :=
 take g, assume Pgin,
-obtain n Plt Pe, from pred_order_lt_card a,
+obtain n Plt Pe, from exists_pow_eq_one a,
 obtain i Pilt Pig, from of_mem_filter Pgin,
 let ni := -(mk_mod n i) in
 assert Pinv : g*a^ni = 1, by
@@ -261,36 +277,14 @@ begin
     apply rfl
 end
 
-lemma cyc_has_one (a : A) : 1 ∈ cyc a :=
-begin
-  apply mem_filter_of_mem !mem_univ,
-  existsi 0, apply and.intro,
-    apply zero_lt_succ,
-    apply pow_zero
-end
-
-lemma cyc_eq_image_pow {a : A} {n : nat} :
-  a^(succ n) = 1 → cyc a = image (pow a) (upto (succ n)) :=
-assume Pe, eq_of_subset_of_subset
-  (subset_of_forall
-    (take g, assume Pgin, obtain i Pilt Pig, from of_mem_filter Pgin, begin
-    rewrite [-Pig, pow_mod Pe],
-    apply mem_image_of_mem_of_eq,
-      apply mem_upto_of_lt (mod_lt i !zero_lt_succ),
-      exact rfl end)) sorry
-
 lemma self_mem_cyc (a : A) : a ∈ cyc a :=
-mem_filter_of_mem !mem_univ (exists.intro (1 : nat) (and.intro (succ_lt_succ card_pos) !pow_one))
+mem_filter_of_mem !mem_univ
+  (exists.intro (1 : nat) (and.intro (succ_lt_succ card_pos) !pow_one))
 
 lemma mem_cyc (a : A) : ∀ {n : nat}, a^n ∈ cyc a
 | 0        := cyc_has_one a
 | (succ n) :=
   begin rewrite pow_succ, apply cyc_mul_closed a, exact mem_cyc, apply self_mem_cyc end
-
-definition order (a : A) := card (cyc a)
-
-lemma order_le_card {a : A} : order a ≤ card A :=
-card_le_card_of_subset !subset_univ
 
 lemma order_le {a : A} {n : nat} : a^(succ n) = 1 → order a ≤ succ n :=
 assume Pe, let s := image (pow a) (upto (succ n)) in
@@ -311,25 +305,26 @@ lemma zero_of_pow {a : A} : ∀ {n : nat}, a^n = 1 → n < order a → n = 0
 | 0        := assume Pe Plt, rfl
 | (succ n) := assume Pe Plt, absurd Pe (pow_ne_of_lt_order Plt)
 
-lemma pow_order (a : A) : a^(order a) = 1 :=
-let f := λ i : fin (order a), pow a (succ i) in
-assert Pinj : injective f, from
-  take i j, assume Peq : a^(succ i) = a^(succ j),
-  assert Pde : a^(diff i j) = 1, from diff_succ ▸ pow_diff_eq_one_of_pow_eq Peq,
-  assert Pdz : diff i j = 0, from
-    zero_of_pow Pde (nat.lt_of_le_of_lt diff_le_max (max_lt_of_lt_of_lt (is_lt i) (is_lt j))),
-  eq_of_veq (eq_of_dist_eq_zero (diff_eq_dist ▸ Pdz)),
-assert Psub : image f univ ⊆ cyc a, from subset_of_forall
+lemma pow_fin_inj (a : A) : injective (pow_fin a) :=
+take i j, assume Peq : a^(succ i) = a^(succ j),
+have Pde : a^(diff i j) = 1, from diff_succ ▸ pow_diff_eq_one_of_pow_eq Peq,
+have Pdz : diff i j = 0, from zero_of_pow Pde
+  (nat.lt_of_le_of_lt diff_le_max (max_lt_of_lt_of_lt (is_lt i) (is_lt j))),
+eq_of_veq (eq_of_dist_eq_zero (diff_eq_dist ▸ Pdz))
+
+lemma cyc_eq_cyc (a : A) : cyc_pow_fin a = cyc a :=
+assert Psub : cyc_pow_fin a ⊆ cyc a, from subset_of_forall
   (take g, assume Pgin,
   obtain i Pin Pig, from exists_of_mem_image Pgin,
   mem_filter_of_mem !mem_univ (exists.intro (succ i) (and.intro
-    (succ_lt_succ (nat.lt_of_lt_of_le (is_lt i) (card_le_card_of_subset !subset_univ)))
-    Pig))),
-assert Peq : image f univ = cyc a, from eq_of_card_eq_of_subset
-  (begin apply eq.trans,
-    apply card_image_eq_of_inj_on,  rewrite [to_set_univ, -injective_iff_inj_on_univ], exact Pinj,
-    rewrite [card_fin] end) Psub,
-obtain i Pin Pone, from exists_of_mem_image (eq.symm Peq ▸ cyc_has_one a),
+    (succ_lt_succ (nat.lt_of_lt_of_le (is_lt i) order_le_group_order)) Pig))),
+eq_of_card_eq_of_subset (begin apply eq.trans,
+    apply card_image_eq_of_inj_on,
+      rewrite [to_set_univ, -injective_iff_inj_on_univ], exact pow_fin_inj a,
+    rewrite [card_fin] end) Psub
+
+lemma pow_order (a : A) : a^(order a) = 1 :=
+obtain i Pin Pone, from exists_of_mem_image (eq.symm (cyc_eq_cyc a) ▸ cyc_has_one a),
 or.elim (eq_or_lt_of_le (succ_le_of_lt (is_lt i)))
   (assume P, P ▸ Pone) (assume P, absurd Pone (pow_ne_of_lt_order P))
 
