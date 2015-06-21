@@ -8,7 +8,7 @@ Author : Haitao Zhang
 -- develop the concept of finite subgroups based on finsets so that the properties
 -- can be used directly without translating from the set based theory first
 
-import data algebra.group algebra.group_power data .subgroup .finfun
+import data algebra.group algebra.group_power data .subgroup .finfun .hom
 open function algebra set finset
 -- ⁻¹ in eq.ops conflicts with group ⁻¹
 open eq.ops
@@ -157,6 +157,9 @@ assume Pilt Pjlt, decidable.by_cases
   (λ Plt : i < j, by rewrite [↑max, if_pos Plt]; exact Pjlt)
   (λ Pnlt : ¬ i < j, by rewrite [↑max, if_neg Pnlt]; exact Pilt)
 
+lemma max_lt {n : nat} (i j : fin n) : max i j < n :=
+max_lt_of_lt_of_lt (is_lt i) (is_lt j)
+
 variable {A : Type}
 
 open list
@@ -225,7 +228,7 @@ exists.intro (pred (diff i₁ i₂)) (begin
   rewrite [succ_pred_of_pos (diff_gt_zero_of_ne Pvne)], apply and.intro,
     apply lt_of_succ_lt_succ,
     rewrite [succ_pred_of_pos (diff_gt_zero_of_ne Pvne)],
-    apply nat.lt_of_le_of_lt diff_le_max (max_lt_of_lt_of_lt (is_lt i₁) (is_lt i₂)),
+    apply nat.lt_of_le_of_lt diff_le_max (max_lt i₁ i₂),
     apply pow_diff_eq_one_of_pow_eq Pfe
   end)
 
@@ -251,6 +254,9 @@ begin
     apply zero_lt_succ,
     apply pow_zero
 end
+
+lemma order_pos (a : A) : 0 < order a :=
+zero_lt_length_of_mem (cyc_has_one a)
 
 lemma cyc_mul_closed (a : A) : finset_mul_closed_on (cyc a) :=
 take g h, assume Pgin Phin,
@@ -304,15 +310,15 @@ assert Psub: cyc a ⊆ s, from subset_of_forall
 lemma pow_ne_of_lt_order {a : A} {n : nat} : succ n < order a → a^(succ n) ≠ 1 :=
 assume Plt, not_imp_not_of_imp order_le (nat.not_le_of_gt Plt)
 
-lemma zero_of_pow {a : A} : ∀ {n : nat}, a^n = 1 → n < order a → n = 0
+lemma eq_zero_of_pow_eq_one {a : A} : ∀ {n : nat}, a^n = 1 → n < order a → n = 0
 | 0        := assume Pe Plt, rfl
 | (succ n) := assume Pe Plt, absurd Pe (pow_ne_of_lt_order Plt)
 
 lemma pow_fin_inj (a : A) (n : nat) : injective (pow_fin a n) :=
 take i j, assume Peq : a^(i + n) = a^(j + n),
 have Pde : a^(diff i j) = 1, from diff_add ▸ pow_diff_eq_one_of_pow_eq Peq,
-have Pdz : diff i j = 0, from zero_of_pow Pde
-  (nat.lt_of_le_of_lt diff_le_max (max_lt_of_lt_of_lt (is_lt i) (is_lt j))),
+have Pdz : diff i j = 0, from eq_zero_of_pow_eq_one Pde
+  (nat.lt_of_le_of_lt diff_le_max (max_lt i j)),
 eq_of_veq (eq_of_dist_eq_zero (diff_eq_dist ▸ Pdz))
 
 lemma cyc_eq_cyc (a : A) (n : nat) : cyc_pow_fin a n = cyc a :=
@@ -334,6 +340,23 @@ is_finsubg.mk (cyc_has_one a) (cyc_mul_closed a) (cyc_has_inv a)
 
 lemma order_dvd_group_order (a : A) : order a ∣ card A :=
 dvd.intro (eq.symm (!mul.comm ▸ lagrange_theorem (subset_univ (cyc a))))
+
+definition pow_fin' (a : A) (n : nat) (i : fin (succ (pred (order a)))) := pow a (i + n)
+
+local attribute group_of_add_group [instance]
+
+lemma pow_fin_hom (a : A) : homomorphic (pow_fin' a 0) :=
+take i j,
+begin
+  rewrite [↑pow_fin', *nat.add_zero],
+  apply pow_madd,
+  rewrite [succ_pred_of_pos !order_pos],
+  exact pow_order a
+end
+
+definition pow_fin_is_iso (a : A) : is_iso_class (pow_fin' a 0) :=
+is_iso_class.mk (pow_fin_hom a)
+  (begin rewrite [↑pow_fin', succ_pred_of_pos !order_pos], exact pow_fin_inj a 0 end)
 
 end cyclic
 
