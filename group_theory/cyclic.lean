@@ -5,7 +5,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author : Haitao Zhang
 -/
 
-import data algebra.group algebra.group_power .finsubg .hom
+import data algebra.group algebra.group_power .finsubg .hom .finfun
 
 open function algebra set finset
 open eq.ops
@@ -256,5 +256,54 @@ is_iso_class.mk (pow_fin_hom a)
   (begin rewrite [↑pow_fin', succ_pred_of_pos !order_pos], exact pow_fin_inj a 0 end)
 
 end cyclic
+
+section rot
+open nat list
+
+lemma map_append {A B : Type} {f : A → B} : ∀ {l₁ l₂ : list A}, map f (l₁++l₂) = (map f l₁)++(map f l₂) := sorry
+
+lemma upto_step : ∀ {n : nat}, upto (succ n) = (map succ (upto n))++[0]
+| 0        := rfl
+| (succ n) := begin rewrite [upto_succ n, map_cons, append_cons, -upto_step] end
+
+variable {A : Type}
+
+definition rotl : ∀ l : list A, list A
+| []     := []
+| (a::l) := l++[a]
+
+lemma rotl_cons {a : A} {l} : rotl (a::l) = l++[a] := rfl
+
+lemma rotl_map {B : Type} {f : A → B} : ∀ {l : list A}, rotl (map f l) = map f (rotl l)
+| []     := rfl
+| (a::l) := begin rewrite [map_cons, *rotl_cons, map_append] end
+
+lemma rotl_upto : ∀ {n : nat}, rotl (upto n) = map (λ i, (i + pred n) mod n) (upto n)
+| 0        := rfl
+| (succ n) := begin
+  rewrite [pred_succ, upto_succ at {1}, upto_step, map_append, rotl_cons],
+  congruence,
+    rewrite [map_map, ↑compose, succ_add]
+  end
+
+open fin fintype
+
+definition fin.rotl {n : nat} : fin (succ n) → fin (succ n) :=
+λ i, (i + maxi)
+
+lemma rotl_eq_rotl {n : nat} : fun_to_list fin.rotl = rotl (upto (succ n)) :=
+sorry
+
+variable [finA : fintype A]
+include finA
+
+lemma list_rot_of_fin_rot {n : nat} (f : fin (succ n) → fin (succ n)) :
+  fun_to_list (f∘fin.rotl) = rotl (fun_to_list f) :=
+begin
+  rewrite [↑fun_to_list, -map_map, rotl_map],
+  congruence, exact rotl_eq_rotl
+end
+
+end rot
 
 end group

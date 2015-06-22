@@ -8,7 +8,7 @@ Author : Haitao Zhang
 -- develop the concept of finite subgroups based on finsets so that the properties
 -- can be used directly without translating from the set based theory first
 
-import data algebra.group algebra.group_power .subgroup
+import data algebra.group .subgroup
 open function algebra set finset
 -- ⁻¹ in eq.ops conflicts with group ⁻¹
 open eq.ops
@@ -31,7 +31,6 @@ structure is_finsubg [class] (H : finset G) : Type :=
           (mul_closed : finset_mul_closed_on H)
           (has_inv : finset_has_inv H)
 
-check @finset.univ
 definition univ_is_finsubg [instance] [finG : fintype G] : is_finsubg (@finset.univ G _) :=
 is_finsubg.mk !mem_univ (λ x y Px Py, !mem_univ) (λ a Pa, !mem_univ)
 
