@@ -5,7 +5,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author : Haitao Zhang
 -/
 
-import data algebra.group algebra.group_power .finsubg .hom .finfun
+import data algebra.group algebra.group_power .finsubg .hom .finfun .perm
 
 open function algebra set finset
 open eq.ops
@@ -232,6 +232,16 @@ obtain i Pin Pone, from exists_of_mem_image (eq.symm (cyc_eq_cyc a 1) ▸ cyc_ha
 or.elim (eq_or_lt_of_le (succ_le_of_lt (is_lt i)))
   (assume P, P ▸ Pone) (assume P, absurd Pone (pow_ne_of_lt_order P))
 
+lemma order_of_min_pow {a : A} {n : nat}
+  (Pone : a^(succ n) = 1) (Pmin : ∀ i, i < n → a^(succ i) ≠ 1) : order a = succ n :=
+or.elim (eq_or_lt_of_le (order_le Pone)) (λ P, P)
+  (λ P : order a < succ n, begin
+  assert Pn : a^(order a) ≠ 1,
+    rewrite [-(succ_pred_of_pos (order_pos a))],
+    apply Pmin, apply nat.lt_of_succ_lt_succ,
+    rewrite [succ_pred_of_pos !order_pos], assumption,
+  exact absurd (pow_order a) Pn end)
+
 definition cyc_is_finsubg [instance] (a : A) : is_finsubg (cyc a) :=
 is_finsubg.mk (cyc_has_one a) (cyc_mul_closed a) (cyc_has_inv a)
 
@@ -262,9 +272,11 @@ open nat list
 
 lemma map_append {A B : Type} {f : A → B} : ∀ {l₁ l₂ : list A}, map f (l₁++l₂) = (map f l₁)++(map f l₂) := sorry
 
-lemma upto_step : ∀ {n : nat}, upto (succ n) = (map succ (upto n))++[0]
+lemma map_singleton {A B : Type} {f : A → B} (a : A) : map f [a] = [f a] := rfl
+
+lemma list.upto_step : ∀ {n : nat}, upto (succ n) = (map succ (upto n))++[0]
 | 0        := rfl
-| (succ n) := begin rewrite [upto_succ n, map_cons, append_cons, -upto_step] end
+| (succ n) := begin rewrite [upto_succ n, map_cons, append_cons, -list.upto_step] end
 
 variable {A : Type}
 
@@ -278,31 +290,81 @@ lemma rotl_map {B : Type} {f : A → B} : ∀ {l : list A}, rotl (map f l) = map
 | []     := rfl
 | (a::l) := begin rewrite [map_cons, *rotl_cons, map_append] end
 
-lemma rotl_upto : ∀ {n : nat}, rotl (upto n) = map (λ i, (i + pred n) mod n) (upto n)
+open fin fintype list
+
+lemma succ_max {n : nat} : fin.succ maxi = (@maxi (succ n)) := rfl
+lemma lift_zero {n : nat} : lift_succ (zero n) = zero (succ n) := rfl
+lemma lift_succ.comm {n : nat} : lift_succ ∘ (@succ n) = succ ∘ lift_succ := sorry
+lemma upto_succ (n : nat) : upto (succ n) = maxi :: map lift_succ (upto n) := sorry
+
+definition upto_step : ∀ {n : nat}, fin.upto (succ n) = (map succ (upto n))++[zero n]
+| 0        := rfl
+| (succ n) := begin rewrite [upto_succ n, map_cons, append_cons, succ_max, upto_succ, -lift_zero],
+  congruence, rewrite [map_map, -lift_succ.comm, -map_map, -(map_singleton (zero n)), -map_append, -upto_step] end
+
+definition fin.rotl : ∀ {n : nat}, fin n → fin n
+| 0        := take i, elim0 i
+| (succ n) := madd maxi
+
+definition rotr : ∀ {n : nat}, fin n → fin n
+| (0:nat)      := take i, elim0 i
+| (nat.succ n) := madd (-maxi)
+
+lemma rotr_rotl : ∀ {n : nat} {i : fin n}, rotr (fin.rotl i) = i
+| 0        := take i, elim0 i
+| (succ n) := take i, calc (-maxi) + (maxi + i) = i : neg_add_cancel_left
+
+lemma rotl_rotr : ∀ {n : nat}, (@fin.rotl n) ∘ rotr = id
+| 0        := funext take i, elim0 i
+| (succ n) := funext take i, calc maxi + (-maxi + i) = i : add_neg_cancel_left
+
+definition seq [reducible] (A : Type) (n : nat) := fin n → A
+
+definition rotl_fun {n : nat} (f : seq A n) : seq A n := f ∘ fin.rotl
+definition rotr_fun {n : nat} (f : seq A n) : seq A n := f ∘ rotr
+
+lemma rotr_rotl_fun {n : nat} (f : seq A n) : rotr_fun (rotl_fun f) = f :=
+calc f ∘ fin.rotl ∘ rotr = f ∘ (fin.rotl ∘ rotr) : compose.assoc
+                     ... = f ∘ id : {rotl_rotr}
+
+lemma rotl_fun_inj {n : nat} : @injective (seq A n) (seq A n) rotl_fun :=
+injective_of_has_left_inverse (exists.intro rotr_fun rotr_rotl_fun)
+
+lemma rotl_succ {n : nat} : fin.rotl ∘ (@succ n) = lift_succ :=
+funext (take i, eq_of_veq (begin rewrite [↑compose, ↑fin.rotl, ↑madd, ↑maxi, ↑lift_succ, val_succ, -succ_add_eq_succ_add, add_mod_self_left, mod_eq_of_lt (lt.trans (is_lt i) !lt_succ_self), -val_lift] end))
+
+lemma rotl_eq_rotl : ∀ {n : nat}, map fin.rotl (upto n) = rotl (upto n)
 | 0        := rfl
 | (succ n) := begin
-  rewrite [pred_succ, upto_succ at {1}, upto_step, map_append, rotl_cons],
+  rewrite [upto_step at {1}, upto_succ, rotl_cons, map_append],
   congruence,
-    rewrite [map_map, ↑compose, succ_add]
+    rewrite [map_map], congruence, exact rotl_succ,
+    rewrite [map_singleton], congruence, rewrite [↑fin.rotl, ↑zero, ↑maxi, ↑madd],
+      congruence, rewrite [nat.add_zero, mod_eq_of_lt !lt_succ_self]
   end
-
-open fin fintype
-
-definition fin.rotl {n : nat} : fin (succ n) → fin (succ n) :=
-λ i, (i + maxi)
-
-lemma rotl_eq_rotl {n : nat} : fun_to_list fin.rotl = rotl (upto (succ n)) :=
-sorry
 
 variable [finA : fintype A]
 include finA
 
-lemma list_rot_of_fin_rot {n : nat} (f : fin (succ n) → fin (succ n)) :
+lemma list_rot_of_fin_rot {n : nat} (f : fin n → fin n) :
   fun_to_list (f∘fin.rotl) = rotl (fun_to_list f) :=
 begin
   rewrite [↑fun_to_list, -map_map, rotl_map],
   congruence, exact rotl_eq_rotl
 end
+
+variable [deceqA : decidable_eq A]
+include deceqA
+
+definition rotl_perm {n : nat} : perm (seq A n) :=
+perm.mk rotl_fun rotl_fun_inj
+
+check @rotl_perm
+lemma rotl_perm_pow_eq_one {n : nat} : (@rotl_perm A _ _ n) ^ n = 1 := sorry
+lemma rotl_perm_pow_ne_one {n : nat} : ∀ i, i < n → (@rotl_perm A _ _ (succ n))^(succ i) ≠ 1 := sorry
+
+lemma rotl_perm_order {n : nat} : order (@rotl_perm A _ _ (succ n)) = (succ n) :=
+order_of_min_pow rotl_perm_pow_eq_one rotl_perm_pow_ne_one
 
 end rot
 
