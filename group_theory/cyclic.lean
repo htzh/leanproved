@@ -278,24 +278,26 @@ lemma list.upto_step : ∀ {n : nat}, upto (succ n) = (map succ (upto n))++[0]
 | 0        := rfl
 | (succ n) := begin rewrite [upto_succ n, map_cons, append_cons, -list.upto_step] end
 
-variable {A : Type}
-
-definition list.rotl : ∀ l : list A, list A
-| []     := []
-| (a::l) := l++[a]
-
-lemma rotl_cons {a : A} {l} : list.rotl (a::l) = l++[a] := rfl
-
-lemma rotl_map {B : Type} {f : A → B} : ∀ {l : list A}, list.rotl (map f l) = map f (list.rotl l)
-| []     := rfl
-| (a::l) := begin rewrite [map_cons, *rotl_cons, map_append] end
-
 open fin fintype list
+
+lemma dmap_map_lift {n : nat} : ∀ l : list nat, (∀ i, i ∈ l → i < n) → dmap (λ i, i < succ n) mk l = map lift_succ (dmap (λ i, i < n) mk l)
+| []     := assume Plt, rfl
+| (i::l) := assume Plt, begin
+  rewrite [@dmap_cons_of_pos _ _ (λ i, i < succ n) _ _ _ (lt.trans (Plt i !mem_cons) (self_lt_succ n)), @dmap_cons_of_pos _ _ (λ i, i < n) _ _ _ (Plt i !mem_cons), map_cons],
+  congruence,
+  apply dmap_map_lift,
+  intro j Pjinl, apply Plt, apply mem_cons_of_mem, assumption end
+
+lemma upto_succ (n : nat) : upto (succ n) = maxi :: map lift_succ (upto n) :=
+begin
+  rewrite [↑fin.upto, list.upto_succ, @dmap_cons_of_pos _ _ (λ i, i < succ n) _ _ _ (nat.self_lt_succ n)],
+  congruence,
+  apply dmap_map_lift, apply @list.lt_of_mem_upto
+end
 
 lemma succ_max {n : nat} : fin.succ maxi = (@maxi (succ n)) := rfl
 lemma lift_zero {n : nat} : lift_succ (zero n) = zero (succ n) := rfl
 lemma lift_succ.comm {n : nat} : lift_succ ∘ (@succ n) = succ ∘ lift_succ := sorry
-lemma upto_succ (n : nat) : upto (succ n) = maxi :: map lift_succ (upto n) := sorry
 
 definition upto_step : ∀ {n : nat}, fin.upto (succ n) = (map succ (upto n))++[zero n]
 | 0        := rfl
@@ -319,6 +321,18 @@ lemma rotl_rotr : ∀ {n : nat}, (@rotl n) ∘ rotr = id
 | (succ n) := funext take i, calc maxi + (-maxi + i) = i : add_neg_cancel_left
 
 definition seq [reducible] (A : Type) (n : nat) := fin n → A
+
+variable {A : Type}
+
+definition list.rotl : ∀ l : list A, list A
+| []     := []
+| (a::l) := l++[a]
+
+lemma rotl_cons {a : A} {l} : list.rotl (a::l) = l++[a] := rfl
+
+lemma rotl_map {B : Type} {f : A → B} : ∀ {l : list A}, list.rotl (map f l) = map f (list.rotl l)
+| []     := rfl
+| (a::l) := begin rewrite [map_cons, *rotl_cons, map_append] end
 
 definition rotl_fun {n : nat} (f : seq A n) : seq A n := f ∘ rotl
 definition rotr_fun {n : nat} (f : seq A n) : seq A n := f ∘ rotr
