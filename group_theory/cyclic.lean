@@ -15,8 +15,13 @@ namespace group
 section cyclic
 open nat fin
 
-definition mk_mod (n i : nat) : fin (succ n) :=
+attribute madd [reducible]
+
+definition mk_mod [reducible] (n i : nat) : fin (succ n) :=
 mk (i mod (succ n)) (mod_lt _ !zero_lt_succ)
+
+lemma madd_mk_mod {n i j : nat} : madd (mk_mod n i) (mk_mod n j) = mk_mod n (i+j) :=
+eq_of_veq begin rewrite [*val_mk, mod_add_mod, add_mod_mod] end
 
 definition diff [reducible] (i j : nat) :=
 if (i < j) then (j - i) else (i - j)
@@ -304,21 +309,54 @@ definition upto_step : ∀ {n : nat}, fin.upto (succ n) = (map succ (upto n))++[
 | (succ n) := begin rewrite [upto_succ n, map_cons, append_cons, succ_max, upto_succ, -lift_zero],
   congruence, rewrite [map_map, -lift_succ.comm, -map_map, -(map_singleton (zero n)), -map_append, -upto_step] end
 
-definition rotl : ∀ {n : nat}, fin n → fin n
-| 0        := take i, elim0 i
-| (succ n) := madd maxi
+section
+local attribute group_of_add_group [instance]
 
-definition rotr : ∀ {n : nat}, fin n → fin n
-| (0:nat)      := take i, elim0 i
-| (nat.succ n) := madd (-maxi)
+lemma pow_eq_mul {n : nat} {i : fin (succ n)} : ∀ {k : nat}, i^k = mk_mod n (i*k)
+| 0        := by rewrite [pow_zero]
+| (succ k) := begin
+  assert Psucc : i^(succ k) = madd (i^k) i, apply pow_succ,
+  rewrite [Psucc, pow_eq_mul],
+  apply eq_of_veq,
+  rewrite [mul_succ, val_madd, ↑mk_mod, mod_add_mod]
+  end
 
-lemma rotr_rotl : ∀ {n : nat} {i : fin n}, rotr (rotl i) = i
-| 0        := take i, elim0 i
-| (succ n) := take i, calc (-maxi) + (maxi + i) = i : neg_add_cancel_left
+end
 
-lemma rotl_rotr : ∀ {n : nat}, (@rotl n) ∘ rotr = id
+definition rotl : ∀ {n : nat} m : nat, fin n → fin n
+| 0        := take m i, elim0 i
+| (succ n) := take m, madd (mk_mod n (n*m))
+
+definition rotr : ∀ {n : nat} m : nat, fin n → fin n
+| (0:nat)      := take m i, elim0 i
+| (nat.succ n) := take m, madd (-(mk_mod n (n*m)))
+
+lemma rotl_succ' {n m : nat} : rotl m = madd (mk_mod n (n*m)) := rfl
+
+lemma rotl_zero : ∀ {n : nat}, @rotl n 0 = id
 | 0        := funext take i, elim0 i
-| (succ n) := funext take i, calc maxi + (-maxi + i) = i : add_neg_cancel_left
+| (succ n) := funext take i, zero_add i
+
+lemma rotl_id : ∀ {n : nat}, @rotl n n = id
+| 0        := funext take i, elim0 i
+| (succ n) :=
+  assert P : mk_mod n (n * succ n) = mk_mod n 0,
+    from eq_of_veq !mul_mod_left,
+  begin rewrite [rotl_succ', P], apply rotl_zero end
+
+lemma rotl_compose : ∀ {n : nat} {j k : nat}, (@rotl n j) ∘ (rotl k) = rotl (j + k)
+| 0        := take j k, funext take i, elim0 i
+| (succ n) :=  take j k, funext take i, eq.symm begin
+  rewrite [*rotl_succ', mul.left_distrib, -(@madd_mk_mod n (n*j)), madd_assoc],
+  end
+
+lemma rotr_rotl : ∀ {n : nat} (m : nat) {i : fin n}, rotr m (rotl m i) = i
+| 0        := take m i, elim0 i
+| (succ n) := take m i, calc (-(mk_mod n (n*m))) + ((mk_mod n (n*m)) + i) = i : neg_add_cancel_left
+
+lemma rotl_rotr : ∀ {n : nat} (m : nat), (@rotl n m) ∘ (rotr m) = id
+| 0        := take m, funext take i, elim0 i
+| (succ n) := take m, funext take i, calc (mk_mod n (n*m)) + (-(mk_mod n (n*m)) + i) = i : add_neg_cancel_left
 
 definition seq [reducible] (A : Type) (n : nat) := fin n → A
 
@@ -334,34 +372,37 @@ lemma rotl_map {B : Type} {f : A → B} : ∀ {l : list A}, list.rotl (map f l) 
 | []     := rfl
 | (a::l) := begin rewrite [map_cons, *rotl_cons, map_append] end
 
-definition rotl_fun {n : nat} (f : seq A n) : seq A n := f ∘ rotl
-definition rotr_fun {n : nat} (f : seq A n) : seq A n := f ∘ rotr
+definition rotl_fun {n : nat} (m : nat) (f : seq A n) : seq A n := f ∘ (rotl m)
+definition rotr_fun {n : nat} (m : nat) (f : seq A n) : seq A n := f ∘ (rotr m)
 
-lemma rotr_rotl_fun {n : nat} (f : seq A n) : rotr_fun (rotl_fun f) = f :=
-calc f ∘ rotl ∘ rotr = f ∘ (rotl ∘ rotr) : compose.assoc
-                     ... = f ∘ id : {rotl_rotr}
+lemma rotl_seq_zero {n : nat} : rotl_fun 0 = @id (seq A n) :=
+funext take f, begin rewrite [↑rotl_fun, rotl_zero] end
 
-lemma rotl_fun_inj {n : nat} : @injective (seq A n) (seq A n) rotl_fun :=
-injective_of_has_left_inverse (exists.intro rotr_fun rotr_rotl_fun)
+lemma rotr_rotl_fun {n : nat} (m : nat) (f : seq A n) : rotr_fun m (rotl_fun m f) = f :=
+calc f ∘ (rotl m) ∘ (rotr m) = f ∘ ((rotl m) ∘ (rotr m)) : compose.assoc
+                         ... = f ∘ id : {rotl_rotr m}
 
-lemma rotl_succ {n : nat} : rotl ∘ (@succ n) = lift_succ :=
-funext (take i, eq_of_veq (begin rewrite [↑compose, ↑rotl, ↑madd, ↑maxi, ↑lift_succ, val_succ, -succ_add_eq_succ_add, add_mod_self_left, mod_eq_of_lt (lt.trans (is_lt i) !lt_succ_self), -val_lift] end))
+lemma rotl_fun_inj {n : nat} {m : nat} : @injective (seq A n) (seq A n) (rotl_fun m) :=
+injective_of_has_left_inverse (exists.intro (rotr_fun m) (rotr_rotl_fun m))
 
-lemma rotl_eq_rotl : ∀ {n : nat}, map rotl (upto n) = list.rotl (upto n)
+lemma rotl_succ {n : nat} : (rotl 1) ∘ (@succ n) = lift_succ :=
+funext (take i, eq_of_veq (begin rewrite [↑compose, ↑rotl, ↑madd, mul_one n, ↑mk_mod, mod_add_mod, ↑lift_succ, val_succ, -succ_add_eq_succ_add, add_mod_self_left, mod_eq_of_lt (lt.trans (is_lt i) !lt_succ_self), -val_lift] end))
+
+lemma rotl_eq_rotl : ∀ {n : nat}, map (rotl 1) (upto n) = list.rotl (upto n)
 | 0        := rfl
 | (succ n) := begin
   rewrite [upto_step at {1}, upto_succ, rotl_cons, map_append],
   congruence,
     rewrite [map_map], congruence, exact rotl_succ,
-    rewrite [map_singleton], congruence, rewrite [↑rotl, ↑zero, ↑maxi, ↑madd],
-      congruence, rewrite [nat.add_zero, mod_eq_of_lt !lt_succ_self]
+    rewrite [map_singleton], congruence, rewrite [↑rotl, mul_one n, ↑mk_mod, ↑zero, ↑maxi, ↑madd],
+      congruence, rewrite [ mod_add_mod, nat.add_zero, mod_eq_of_lt !lt_succ_self]
   end
 
 variable [finA : fintype A]
 include finA
 
 lemma list_rot_of_fin_rot {n : nat} (f : seq A n) :
-  fun_to_list (rotl_fun f) = list.rotl (fun_to_list f) :=
+  fun_to_list (rotl_fun 1 f) = list.rotl (fun_to_list f) :=
 begin
   rewrite [↑fun_to_list, ↑rotl_fun, -map_map, rotl_map],
   congruence, exact rotl_eq_rotl
@@ -372,13 +413,8 @@ end rot
 section rotg
 open nat fin fintype
 
-definition rotl_perm (A : Type) [finA : fintype A] [deceqA : decidable_eq A] (n : nat) :
-  perm (seq A n) :=
-perm.mk rotl_fun rotl_fun_inj
-
-definition rotl_perm_pow (A : Type) [finA : fintype A] [deceqA : decidable_eq A] (n : nat) : ∀ i : nat, perm (seq A n)
-| 0        := 1
-| (succ i) := sorry
+definition rotl_perm [reducible] (A : Type) [finA : fintype A] [deceqA : decidable_eq A] (n : nat) (m : nat) : perm (seq A n) :=
+perm.mk (rotl_fun m) rotl_fun_inj
 
 variable {A : Type}
 variable [finA : fintype A]
@@ -388,11 +424,25 @@ include deceqA
 
 variable {n : nat}
 
-lemma rotl_perm_pow_eq : ∀ {i : nat}, (rotl_perm A n) ^ i = rotl_perm_pow A n i := sorry
-lemma rotl_perm_pow_eq_one : (rotl_perm A n) ^ n = 1 := sorry
-lemma rotl_perm_pow_ne_one : ∀ i, i < n → (rotl_perm A (succ n))^(succ i) ≠ 1 := sorry
+lemma rotl_perm_mul {i j : nat} : (rotl_perm A n i) * (rotl_perm A n j) = rotl_perm A n (j+i) :=
+eq_of_feq (funext take f, calc
+  f ∘ (rotl j) ∘ (rotl i) = f ∘ ((rotl j) ∘ (rotl i)) : compose.assoc
+                      ... = f ∘ (rotl (j+i)) : rotl_compose)
 
-lemma rotl_perm_order : order (rotl_perm A (succ n)) = (succ n) :=
+lemma rotl_perm_pow_eq : ∀ {i : nat}, (rotl_perm A n 1) ^ i = rotl_perm A n i
+| 0 := begin rewrite [pow_zero, ↑rotl_perm, perm_one, -eq_iff_feq, *perm.f_mk, rotl_seq_zero]  end
+| (succ i) := begin rewrite [pow_succ, rotl_perm_pow_eq, rotl_perm_mul, one_add] end
+
+lemma rotl_perm_pow_eq_one : (rotl_perm A n 1) ^ n = 1 :=
+eq.trans rotl_perm_pow_eq (eq_of_feq begin rewrite [perm.f_mk, ↑rotl_fun, rotl_id] end)
+
+-- needs A to have at least two elements!
+lemma rotl_perm_pow_ne_one : ∀ i, i < n → (rotl_perm A (succ n) 1)^(succ i) ≠ 1 :=
+take i, assume Piltn, begin
+  intro P, revert P, rewrite [rotl_perm_pow_eq, -eq_iff_feq, perm_one, *perm.f_mk]
+end
+
+lemma rotl_perm_order : order (rotl_perm A (succ n) 1) = (succ n) :=
 order_of_min_pow rotl_perm_pow_eq_one rotl_perm_pow_ne_one
 
 end rotg

@@ -59,6 +59,8 @@ lemma feq_of_eq : ∀ {p₁ p₂ : perm A}, p₁ = p₂ → (perm.f p₁) = p₂
 lemma eq_iff_feq {p₁ p₂ : perm A} : (perm.f p₁) = p₂ ↔ p₁ = p₂ :=
 iff.intro eq_of_feq feq_of_eq
 
+lemma perm.f_mk {f : A → A} {Pinj : injective f} : perm.f (perm.mk f Pinj) = f := rfl
+
 definition move_by [reducible] (a : A) (f : perm A) : A := f a
 
 variable [deceqA : decidable_eq A]
@@ -90,7 +92,7 @@ definition perm_is_fintype [instance] : fintype (perm A) :=
 
 definition perm.mul (f g : perm A) :=
            perm.mk (f∘g) (injective_compose (perm.inj f) (perm.inj g))
-definition perm.one : perm A := perm.mk id injective_id
+definition perm.one [reducible] : perm A := perm.mk id injective_id
 definition perm.inv (f : perm A) := let inj := perm.inj f in
            perm.mk (perm_inv inj) (perm_inv_inj inj)
 
@@ -111,6 +113,8 @@ lemma perm.right_inv (p : perm A) : p ^ (perm.inv p) = perm.one :=
 
 definition perm_group [instance] : group (perm A) :=
            group.mk perm.mul perm.assoc perm.one perm.one_mul perm.mul_one perm.inv perm.left_inv
+
+lemma perm_one : (1 : perm A) = perm.one := rfl
 
 end perm
 
