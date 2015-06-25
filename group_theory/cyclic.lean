@@ -275,6 +275,9 @@ end cyclic
 section rot
 open nat list
 
+lemma lt_succ_of_lt {i j : nat} : i < j → i < succ j :=
+assume Plt, lt.trans Plt (self_lt_succ j)
+
 lemma map_append {A B : Type} {f : A → B} : ∀ {l₁ l₂ : list A}, map f (l₁++l₂) = (map f l₁)++(map f l₂) := sorry
 
 lemma map_singleton {A B : Type} {f : A → B} (a : A) : map f [a] = [f a] := rfl
@@ -288,7 +291,7 @@ open fin fintype list
 lemma dmap_map_lift {n : nat} : ∀ l : list nat, (∀ i, i ∈ l → i < n) → dmap (λ i, i < succ n) mk l = map lift_succ (dmap (λ i, i < n) mk l)
 | []     := assume Plt, rfl
 | (i::l) := assume Plt, begin
-  rewrite [@dmap_cons_of_pos _ _ (λ i, i < succ n) _ _ _ (lt.trans (Plt i !mem_cons) (self_lt_succ n)), @dmap_cons_of_pos _ _ (λ i, i < n) _ _ _ (Plt i !mem_cons), map_cons],
+  rewrite [@dmap_cons_of_pos _ _ (λ i, i < succ n) _ _ _ (lt_succ_of_lt (Plt i !mem_cons)), @dmap_cons_of_pos _ _ (λ i, i < n) _ _ _ (Plt i !mem_cons), map_cons],
   congruence,
   apply dmap_map_lift,
   intro j Pjinl, apply Plt, apply mem_cons_of_mem, assumption end
@@ -344,6 +347,8 @@ lemma rotl_id : ∀ {n : nat}, @rotl n n = id
     from eq_of_veq !mul_mod_left,
   begin rewrite [rotl_succ', P], apply rotl_zero end
 
+lemma rotl_to_zero {n : nat} : ∀ {i : nat}, rotl i (mk_mod n i) = zero n
+
 lemma rotl_compose : ∀ {n : nat} {j k : nat}, (@rotl n j) ∘ (rotl k) = rotl (j + k)
 | 0        := take j k, funext take i, elim0 i
 | (succ n) :=  take j k, funext take i, eq.symm begin
@@ -377,6 +382,17 @@ definition rotr_fun {n : nat} (m : nat) (f : seq A n) : seq A n := f ∘ (rotr m
 
 lemma rotl_seq_zero {n : nat} : rotl_fun 0 = @id (seq A n) :=
 funext take f, begin rewrite [↑rotl_fun, rotl_zero] end
+
+lemma rotl_seq_ne : ∀ {n : nat}, (∃ a b : A, a ≠ b) → ∀ i, i < n → rotl_fun i ≠ (@id (seq A (succ n)))
+| 0        := assume Pex, take i, assume Piltn, absurd Piltn !not_lt_zero
+| (succ n) := assume Pex, obtain a b Pne, from Pex, take i, assume Pilt,
+  let f := λ j : fin (succ (succ n)), if j = zero (succ n) then a else b in
+  assert P : rotl_fun i f ≠ f, from
+    let fi := @mk (succ (succ n)) (succ i) (succ_lt_succ Pilt) in
+    assert P1 : rotl_fun (succ i) f fi ≠ f fi,
+      from _,
+    assume Peq, absurd (congr_fun Peq fi) P1,
+  assume Peq, absurd (congr_fun Peq f) P
 
 lemma rotr_rotl_fun {n : nat} (m : nat) (f : seq A n) : rotr_fun m (rotl_fun m f) = f :=
 calc f ∘ (rotl m) ∘ (rotr m) = f ∘ ((rotl m) ∘ (rotr m)) : compose.assoc
