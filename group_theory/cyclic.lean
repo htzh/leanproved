@@ -15,7 +15,7 @@ namespace group
 section cyclic
 open nat fin
 
-attribute madd [reducible]
+local attribute madd [reducible]
 
 definition mk_mod [reducible] (n i : nat) : fin (succ n) :=
 mk (i mod (succ n)) (mod_lt _ !zero_lt_succ)
@@ -284,7 +284,9 @@ open nat list
 lemma lt_succ_of_lt {i j : nat} : i < j → i < succ j :=
 assume Plt, lt.trans Plt (self_lt_succ j)
 
-lemma map_append {A B : Type} {f : A → B} : ∀ {l₁ l₂ : list A}, map f (l₁++l₂) = (map f l₁)++(map f l₂) := sorry
+lemma map_append {A B : Type} {f : A → B} : ∀ {l₁ l₂ : list A}, map f (l₁++l₂) = (map f l₁)++(map f l₂)
+| nil    := take l, rfl
+| (a::l) := take l', begin rewrite [append_cons, *map_cons, append_cons, map_append] end
 
 lemma map_singleton {A B : Type} {f : A → B} (a : A) : map f [a] = [f a] := rfl
 
@@ -311,7 +313,8 @@ end
 
 lemma succ_max {n : nat} : fin.succ maxi = (@maxi (succ n)) := rfl
 lemma lift_zero {n : nat} : lift_succ (zero n) = zero (succ n) := rfl
-lemma lift_succ.comm {n : nat} : lift_succ ∘ (@succ n) = succ ∘ lift_succ := sorry
+lemma lift_succ.comm {n : nat} : lift_succ ∘ (@succ n) = succ ∘ lift_succ :=
+funext take i, eq_of_veq (begin rewrite [↑lift_succ, -val_lift, *val_succ, -val_lift] end)
 
 definition upto_step : ∀ {n : nat}, fin.upto (succ n) = (map succ (upto n))++[zero n]
 | 0        := rfl
@@ -390,7 +393,7 @@ definition rotr_fun {n : nat} (m : nat) (f : seq A n) : seq A n := f ∘ (rotr m
 lemma rotl_seq_zero {n : nat} : rotl_fun 0 = @id (seq A n) :=
 funext take f, begin rewrite [↑rotl_fun, rotl_zero] end
 
-lemma rotl_seq_ne : ∀ {n : nat}, (∃ a b : A, a ≠ b) → ∀ i, i < n → rotl_fun (succ i) ≠ (@id (seq A (succ n)))
+lemma rotl_seq_ne_id : ∀ {n : nat}, (∃ a b : A, a ≠ b) → ∀ i, i < n → rotl_fun (succ i) ≠ (@id (seq A (succ n)))
 | 0        := assume Pex, take i, assume Piltn, absurd Piltn !not_lt_zero
 | (succ n) := assume Pex, obtain a b Pne, from Pex, take i, assume Pilt,
   let f := (λ j : fin (succ (succ n)), if j = zero (succ n) then a else b),
@@ -463,7 +466,7 @@ eq.trans rotl_perm_pow_eq (eq_of_feq begin rewrite [perm.f_mk, ↑rotl_fun, rotl
 lemma rotl_perm_pow_ne_one (Pex : ∃ a b : A, a ≠ b) : ∀ i, i < n → (rotl_perm A (succ n) 1)^(succ i) ≠ 1 :=
 take i, assume Piltn, begin
   intro P, revert P, rewrite [rotl_perm_pow_eq, -eq_iff_feq, perm_one, *perm.f_mk],
-  intro P, exact absurd P (rotl_seq_ne Pex i Piltn)
+  intro P, exact absurd P (rotl_seq_ne_id Pex i Piltn)
 end
 
 lemma rotl_perm_order (Pex : ∃ a b : A, a ≠ b) : order (rotl_perm A (succ n) 1) = (succ n) :=
