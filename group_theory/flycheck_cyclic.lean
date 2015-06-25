@@ -390,6 +390,18 @@ definition rotr_fun {n : nat} (m : nat) (f : seq A n) : seq A n := f ∘ (rotr m
 lemma rotl_seq_zero {n : nat} : rotl_fun 0 = @id (seq A n) :=
 funext take f, begin rewrite [↑rotl_fun, rotl_zero] end
 
+/-
+lemma rotl_seq_ne : ∀ {n : nat}, (∃ a b : A, a ≠ b) → ∀ i, i < n → rotl_fun i ≠ (@id (seq A (succ n)))
+| 0        := assume Pex, take i, assume Piltn, absurd Piltn !not_lt_zero
+| (succ n) := assume Pex, obtain a b Pne, from Pex, take i, assume Pilt,
+  let f := (λ j : fin (succ (succ n)), if j = zero (succ n) then a else b),
+      fi := mk_mod (succ n) (succ i) in
+  have Pfne : rotl_fun (succ i) f fi ≠ f fi,
+    from begin rewrite [↑rotl_fun, rotl_to_zero] end,
+  have P : rotl_fun i f ≠ f, from
+    assume Peq, absurd (congr_fun Peq fi) Pfne,
+  assume Peq, absurd (congr_fun Peq f) P
+-/
 lemma rotl_seq_ne : ∀ {n : nat}, (∃ a b : A, a ≠ b) → ∀ i, i < n → rotl_fun i ≠ (@id (seq A (succ n)))
 | 0        := assume Pex, take i, assume Piltn, absurd Piltn !not_lt_zero
 | (succ n) := assume Pex, obtain a b Pne, from Pex, take i, assume Pilt,
