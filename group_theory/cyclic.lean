@@ -390,7 +390,7 @@ definition rotr_fun {n : nat} (m : nat) (f : seq A n) : seq A n := f ∘ (rotr m
 lemma rotl_seq_zero {n : nat} : rotl_fun 0 = @id (seq A n) :=
 funext take f, begin rewrite [↑rotl_fun, rotl_zero] end
 
-lemma rotl_seq_ne : ∀ {n : nat}, (∃ a b : A, a ≠ b) → ∀ i, i < n → rotl_fun i ≠ (@id (seq A (succ n)))
+lemma rotl_seq_ne : ∀ {n : nat}, (∃ a b : A, a ≠ b) → ∀ i, i < n → rotl_fun (succ i) ≠ (@id (seq A (succ n)))
 | 0        := assume Pex, take i, assume Piltn, absurd Piltn !not_lt_zero
 | (succ n) := assume Pex, obtain a b Pne, from Pex, take i, assume Pilt,
   let f := (λ j : fin (succ (succ n)), if j = zero (succ n) then a else b),
@@ -460,13 +460,14 @@ lemma rotl_perm_pow_eq_one : (rotl_perm A n 1) ^ n = 1 :=
 eq.trans rotl_perm_pow_eq (eq_of_feq begin rewrite [perm.f_mk, ↑rotl_fun, rotl_id] end)
 
 -- needs A to have at least two elements!
-lemma rotl_perm_pow_ne_one : ∀ i, i < n → (rotl_perm A (succ n) 1)^(succ i) ≠ 1 :=
+lemma rotl_perm_pow_ne_one (Pex : ∃ a b : A, a ≠ b) : ∀ i, i < n → (rotl_perm A (succ n) 1)^(succ i) ≠ 1 :=
 take i, assume Piltn, begin
-  intro P, revert P, rewrite [rotl_perm_pow_eq, -eq_iff_feq, perm_one, *perm.f_mk]
+  intro P, revert P, rewrite [rotl_perm_pow_eq, -eq_iff_feq, perm_one, *perm.f_mk],
+  intro P, exact absurd P (rotl_seq_ne Pex i Piltn)
 end
 
-lemma rotl_perm_order : order (rotl_perm A (succ n) 1) = (succ n) :=
-order_of_min_pow rotl_perm_pow_eq_one rotl_perm_pow_ne_one
+lemma rotl_perm_order (Pex : ∃ a b : A, a ≠ b) : order (rotl_perm A (succ n) 1) = (succ n) :=
+order_of_min_pow rotl_perm_pow_eq_one (rotl_perm_pow_ne_one Pex)
 
 end rotg
 

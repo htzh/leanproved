@@ -11,6 +11,7 @@ ignore/
 *.ilean
 *.d
 *.ninja*
+flycheck*
 a.out
 build
 GPATH
