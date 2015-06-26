@@ -17,6 +17,11 @@ lemma id_apply {A : Type} {a : A} : id a = a := rfl
 lemma Prodl_singleton {A B : Type} [mB : monoid B] {a : A} {f : A → B} : Prodl [a] f = f a :=
 !one_mul
 
+lemma Prodl_map {A B : Type} [mB : monoid B] {f : A → B} :
+  ∀ {l : list A}, Prodl l f = Prodl (map f l) id
+| nil    := by rewrite [map_nil]
+| (a::l) := begin rewrite [map_cons, Prodl_cons f, Prodl_cons id (f a), Prodl_map] end
+
 lemma prodl_rotl_eq_one_of_prodl_eq_one {A B : Type} [gB : group B] {f : A → B} :
   ∀ {l : list A}, Prodl l f = 1 → Prodl (list.rotl l) f = 1
 | nil := assume Peq, rfl
@@ -72,6 +77,31 @@ definition all_prodseq_eq_one (n : nat) : list (seq A (succ n)) :=
 dmap (λ l, length l = card (fin (succ n))) list_to_fun (all_prodl_eq_one n)
 
 definition prodseq {n : nat} (s : seq A n) : A := Prodl (upto n) s
+
+lemma prodseq_eq {n :nat} {s : seq A n} : prodseq s = Prodl (fun_to_list s) id :=
+Prodl_map
+
+lemma prodseq_eq_one_of_mem_all_prodseq_eq_one {n : nat} {s : seq A (succ n)} :
+  s ∈ all_prodseq_eq_one n → prodseq s = 1 :=
+assume Psin, obtain l Pex, from exists_of_mem_dmap Psin,
+obtain leq Pin Peq, from Pex,
+by rewrite [prodseq_eq, Peq, list_to_fun_to_list, prodl_eq_one_of_mem_all_prodl_eq_one Pin]
+
+lemma all_prodseq_eq_one_complete {n : nat} {s : seq A (succ n)} :
+  prodseq s = 1 → s ∈ all_prodseq_eq_one n :=
+assume Peq,
+assert Plin : map s (elems (fin (succ n))) ∈ all_prodl_eq_one n,
+  from begin
+  apply all_prodl_eq_one_complete,
+    rewrite [length_map], exact length_upto (succ n),
+    rewrite prodseq_eq at Peq, exact Peq
+  end,
+assert Psin : list_to_fun (map s (elems (fin (succ n)))) (length_map_of_fintype s) ∈ all_prodseq_eq_one n,
+  from mem_dmap _ Plin,
+by rewrite [fun_eq_list_to_fun_map s (length_map_of_fintype s)]; apply Psin
+
+lemma nodup_all_prodseq_eq_one {n : nat} : nodup (@all_prodseq_eq_one A _ _ _ n) :=
+dmap_nodup_of_dinj dinj_list_to_fun nodup_all_prodl_eq_one
 
 end cauchy
 end group
