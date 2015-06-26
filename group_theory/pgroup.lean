@@ -29,6 +29,9 @@ variable {A : Type}
 variable [ambA : group A]
 include ambA
 
+theorem eq_inv_of_mul_eq_one {a b : A} (H : a * b = 1) : a = b⁻¹ :=
+begin rewrite [eq_inv_iff_eq_inv], apply eq.symm, exact inv_eq_of_mul_eq_one H end
+
 variable [finA : fintype A]
 include finA
 
@@ -46,14 +49,29 @@ begin substvars, rewrite [length_cons, length_mem_all_lists Pl'] end
 lemma nodup_all_prodl_eq_one {n : nat} : nodup (@all_prodl_eq_one A _ _ n) :=
 nodup_map (take l₁ l₂ Peq, tail_eq_of_cons_eq Peq) nodup_all_lists
 
-lemma complete_all_prodl_eq_one {n : nat} : ∀ {l : list A}, length l = succ n → Prodl l id = 1 → l ∈ all_prodl_eq_one n
+lemma all_prodl_eq_one_complete {n : nat} : ∀ {l : list A}, length l = succ n → Prodl l id = 1 → l ∈ all_prodl_eq_one n
 | nil    := assume Pleq, by contradiction
 | (a::l) := assume Pleq Pprod,
-  begin rewrite {a::l}Prodl at Pprod end
+  begin
+    rewrite length_cons at Pleq,
+    rewrite (Prodl_cons id a l) at Pprod,
+    rewrite [eq_inv_of_mul_eq_one Pprod],
+    apply mem_map, apply mem_all_lists, apply succ.inj Pleq
+  end
+
+open fintype
+lemma length_all_prodl_eq_one {n : nat} : length (@all_prodl_eq_one A _ _ n) = (card A)^n :=
+eq.trans !length_map length_all_lists
+
 open fin
 
-definition prodseq {n : nat} (s : seq A n) : A := Prodl (upto n) s
+variable [deceqA : decidable_eq A]
+include deceqA
 
+definition all_prodseq_eq_one (n : nat) : list (seq A (succ n)) :=
+dmap (λ l, length l = card (fin (succ n))) list_to_fun (all_prodl_eq_one n)
+
+definition prodseq {n : nat} (s : seq A n) : A := Prodl (upto n) s
 
 end cauchy
 end group
