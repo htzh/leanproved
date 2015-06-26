@@ -424,10 +424,7 @@ calc f ∘ (rotl m) ∘ (rotr m) = f ∘ ((rotl m) ∘ (rotr m)) : compose.assoc
 lemma rotl_fun_inj {n : nat} {m : nat} : @injective (seq A n) (seq A n) (rotl_fun m) :=
 injective_of_has_left_inverse (exists.intro (rotr_fun m) (rotr_rotl_fun m))
 
-variable [finA : fintype A]
-include finA
-
-lemma list_rotl_of_fin_rotl {n : nat} (f : seq A n) :
+lemma seq_rotl_eq_list_rotl {n : nat} (f : seq A n) :
   fun_to_list (rotl_fun 1 f) = list.rotl (fun_to_list f) :=
 begin
   rewrite [↑fun_to_list, ↑rotl_fun, -map_map, rotl_map],
