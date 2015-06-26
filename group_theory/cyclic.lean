@@ -7,7 +7,7 @@ Author : Haitao Zhang
 
 import data algebra.group algebra.group_power .finsubg .hom .finfun .perm
 
-open function algebra set finset
+open function algebra finset
 open eq.ops
 
 namespace group
@@ -235,7 +235,7 @@ assert Psub : cyc_pow_fin a n ⊆ cyc a, from subset_of_forall
   obtain i Pin Pig, from exists_of_mem_image Pgin, by rewrite [-Pig]; apply mem_cyc),
 eq_of_card_eq_of_subset (begin apply eq.trans,
     apply card_image_eq_of_inj_on,
-      rewrite [to_set_univ, -injective_iff_inj_on_univ], exact pow_fin_inj a n,
+      rewrite [to_set_univ, -set.injective_iff_inj_on_univ], exact pow_fin_inj a n,
     rewrite [card_fin] end) Psub
 
 lemma pow_order (a : A) : a^(order a) = 1 :=
@@ -373,19 +373,32 @@ lemma rotl_rotr : ∀ {n : nat} (m : nat), (@rotl n m) ∘ (rotr m) = id
 | 0        := take m, funext take i, elim0 i
 | (succ n) := take m, funext take i, calc (mk_mod n (n*m)) + (-(mk_mod n (n*m)) + i) = i : add_neg_cancel_left
 
-definition seq [reducible] (A : Type) (n : nat) := fin n → A
+lemma rotl_succ {n : nat} : (rotl 1) ∘ (@succ n) = lift_succ :=
+funext (take i, eq_of_veq (begin rewrite [↑compose, ↑rotl, ↑madd, mul_one n, ↑mk_mod, mod_add_mod, ↑lift_succ, val_succ, -succ_add_eq_succ_add, add_mod_self_left, mod_eq_of_lt (lt.trans (is_lt i) !lt_succ_self), -val_lift] end))
 
-variable {A : Type}
-
-definition list.rotl : ∀ l : list A, list A
+definition list.rotl {A : Type} : ∀ l : list A, list A
 | []     := []
 | (a::l) := l++[a]
 
-lemma rotl_cons {a : A} {l} : list.rotl (a::l) = l++[a] := rfl
+lemma rotl_cons {A : Type} {a : A} {l} : list.rotl (a::l) = l++[a] := rfl
 
-lemma rotl_map {B : Type} {f : A → B} : ∀ {l : list A}, list.rotl (map f l) = map f (list.rotl l)
+lemma rotl_map {A B : Type} {f : A → B} : ∀ {l : list A}, list.rotl (map f l) = map f (list.rotl l)
 | []     := rfl
 | (a::l) := begin rewrite [map_cons, *rotl_cons, map_append] end
+
+lemma rotl_eq_rotl : ∀ {n : nat}, map (rotl 1) (upto n) = list.rotl (upto n)
+| 0        := rfl
+| (succ n) := begin
+  rewrite [upto_step at {1}, upto_succ, rotl_cons, map_append],
+  congruence,
+    rewrite [map_map], congruence, exact rotl_succ,
+    rewrite [map_singleton], congruence, rewrite [↑rotl, mul_one n, ↑mk_mod, ↑zero, ↑maxi, ↑madd],
+      congruence, rewrite [ mod_add_mod, nat.add_zero, mod_eq_of_lt !lt_succ_self]
+  end
+
+definition seq [reducible] (A : Type) (n : nat) := fin n → A
+
+variable {A : Type}
 
 definition rotl_fun {n : nat} (m : nat) (f : seq A n) : seq A n := f ∘ (rotl m)
 definition rotr_fun {n : nat} (m : nat) (f : seq A n) : seq A n := f ∘ (rotr m)
@@ -411,23 +424,10 @@ calc f ∘ (rotl m) ∘ (rotr m) = f ∘ ((rotl m) ∘ (rotr m)) : compose.assoc
 lemma rotl_fun_inj {n : nat} {m : nat} : @injective (seq A n) (seq A n) (rotl_fun m) :=
 injective_of_has_left_inverse (exists.intro (rotr_fun m) (rotr_rotl_fun m))
 
-lemma rotl_succ {n : nat} : (rotl 1) ∘ (@succ n) = lift_succ :=
-funext (take i, eq_of_veq (begin rewrite [↑compose, ↑rotl, ↑madd, mul_one n, ↑mk_mod, mod_add_mod, ↑lift_succ, val_succ, -succ_add_eq_succ_add, add_mod_self_left, mod_eq_of_lt (lt.trans (is_lt i) !lt_succ_self), -val_lift] end))
-
-lemma rotl_eq_rotl : ∀ {n : nat}, map (rotl 1) (upto n) = list.rotl (upto n)
-| 0        := rfl
-| (succ n) := begin
-  rewrite [upto_step at {1}, upto_succ, rotl_cons, map_append],
-  congruence,
-    rewrite [map_map], congruence, exact rotl_succ,
-    rewrite [map_singleton], congruence, rewrite [↑rotl, mul_one n, ↑mk_mod, ↑zero, ↑maxi, ↑madd],
-      congruence, rewrite [ mod_add_mod, nat.add_zero, mod_eq_of_lt !lt_succ_self]
-  end
-
 variable [finA : fintype A]
 include finA
 
-lemma list_rot_of_fin_rot {n : nat} (f : seq A n) :
+lemma list_rotl_of_fin_rotl {n : nat} (f : seq A n) :
   fun_to_list (rotl_fun 1 f) = list.rotl (fun_to_list f) :=
 begin
   rewrite [↑fun_to_list, ↑rotl_fun, -map_map, rotl_map],
