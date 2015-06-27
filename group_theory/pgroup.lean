@@ -5,9 +5,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author : Haitao Zhang
 -/
 
-import data algebra.group algebra.group_power algebra.group_bigops .cyclic .finfun
+import data algebra.group algebra.group_power algebra.group_bigops .cyclic .finfun .perm
 
-open nat list algebra function subtype
+open nat fin list algebra function subtype
 
 section
 check @tag
@@ -199,12 +199,31 @@ variables {A : Type} [ambA : group A] [finA : fintype A] [deceqA : decidable_eq 
 include ambA finA deceqA
 
 local attribute perm.f [coercion]
-check @injective
 
 lemma rotl_peo_seq_inj {n m : nat} : injective (rotl_peo_seq A n m) :=
 take ps₁ ps₂, subtype.destruct ps₁ (λ s₁ P₁, subtype.destruct ps₂ (λ s₂ P₂,
   assume Peq, tag_eq (rotl_fun_inj (dinj_tag peo _ _ Peq))))
 
+end
+
+section defs
+variables (A : Type) [ambA : group A] [finA : fintype A] [deceqA : decidable_eq A]
+include ambA finA deceqA
+open fin fintype
+
+definition rotl_perm_ps (n m : nat) : perm (peo_seq A n) :=
+perm.mk (rotl_peo_seq A n m) rotl_peo_seq_inj
+
+end defs
+
+section
+variables {A : Type} [ambA : group A] [finA : fintype A] [deceqA : decidable_eq A]
+include ambA finA deceqA
+open fin fintype subtype
+print classes
+print instances decidable
+print instances fintype
+lemma rotl_perm_ps_pow_eq {n i : nat} [d : decidable_eq (peo_seq A n)] : (rotl_perm_ps A n 1)^i = (rotl_perm_ps A n i) := sorry
 end
 
 end cauchy
