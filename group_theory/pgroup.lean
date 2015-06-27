@@ -200,6 +200,16 @@ include ambA finA deceqA
 
 local attribute perm.f [coercion]
 
+lemma rotl_peo_seq_zero {n : nat} : rotl_peo_seq A n 0 = id :=
+funext take s, subtype.eq begin rewrite [↑rotl_peo_seq, ↑rotl_perm, rotl_seq_zero] end
+
+lemma rotl_peo_seq_id {n : nat} : rotl_peo_seq A n (succ n) = id :=
+funext take s, subtype.eq begin rewrite [↑rotl_peo_seq, -rotl_perm_pow_eq, rotl_perm_pow_eq_one] end
+
+lemma rotl_peo_seq_compose {n i j : nat} :
+  (rotl_peo_seq A n i) ∘ (rotl_peo_seq A n j) = rotl_peo_seq A n (j + i) :=
+funext take s, subtype.eq begin rewrite [↑rotl_peo_seq, ↑rotl_perm, ↑rotl_fun, compose.assoc, rotl_compose] end
+
 lemma rotl_peo_seq_inj {n m : nat} : injective (rotl_peo_seq A n m) :=
 take ps₁ ps₂, subtype.destruct ps₁ (λ s₁ P₁, subtype.destruct ps₂ (λ s₂ P₂,
   assume Peq, tag_eq (rotl_fun_inj (dinj_tag peo _ _ Peq))))
@@ -211,19 +221,25 @@ variables (A : Type) [ambA : group A] [finA : fintype A] [deceqA : decidable_eq 
 include ambA finA deceqA
 open fin fintype
 
-definition rotl_perm_ps (n m : nat) : perm (peo_seq A n) :=
+definition rotl_perm_ps [reducible] (n m : nat) : perm (peo_seq A n) :=
 perm.mk (rotl_peo_seq A n m) rotl_peo_seq_inj
 
 end defs
 
 section
-variables {A : Type} [ambA : group A] [finA : fintype A] [deceqA : decidable_eq A]
+variables {A : Type} [ambA : group A] [finA : fintype A] [deceqA : decidable_eq A] {n : nat}
 include ambA finA deceqA
-open fin fintype subtype
-print classes
-print instances decidable
-print instances fintype
-lemma rotl_perm_ps_pow_eq {n i : nat} [d : decidable_eq (peo_seq A n)] : (rotl_perm_ps A n 1)^i = (rotl_perm_ps A n i) := sorry
+
+variable [d : decidable_eq (peo_seq A n)]
+include d
+
+lemma rotl_perm_ps_pow_eq : ∀ {i : nat}, (rotl_perm_ps A n 1)^i = (rotl_perm_ps A n i)
+| 0 := begin rewrite [pow_zero (rotl_perm_ps A n 1), @perm_one (peo_seq A n), -eq_iff_feq, *perm.f_mk, rotl_peo_seq_zero] end
+| (succ i) := begin rewrite [pow_succ (rotl_perm_ps A n 1), rotl_perm_ps_pow_eq, -(one_add i), -eq_iff_feq, ↑rotl_perm_ps, -rotl_peo_seq_compose] end
+
+lemma rotl_perm_ps_pow_eq_one : (rotl_perm_ps A n 1) ^ (succ n) = 1 :=
+eq.trans rotl_perm_ps_pow_eq (eq_of_feq begin rewrite [perm.f_mk] end)
+
 end
 
 end cauchy
