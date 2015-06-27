@@ -7,8 +7,14 @@ Author : Haitao Zhang
 
 import data algebra.group algebra.group_power algebra.group_bigops .cyclic .finfun
 
-open nat list algebra function
+open nat list algebra function subtype
 
+section
+check @tag
+lemma dinj_tag {A : Type} (P : A → Prop) : dinj P tag :=
+take a₁ a₂ Pa₁ Pa₂ Pteq, subtype.no_confusion Pteq (λ Pe Pqe, Pe)
+
+end
 namespace group
 section cauchy
 
@@ -30,6 +36,56 @@ lemma prodl_rotl_eq_one_of_prodl_eq_one {A B : Type} [gB : group B] {f : A → B
   exact mul_eq_one_of_mul_eq_one
   end
 
+section defs
+
+variables (A : Type) [ambA : group A] [finA : fintype A]
+include ambA finA
+
+definition all_prodl_eq_one (n : nat) : list (list A) :=
+map (λ l, cons (Prodl l id)⁻¹ l) (all_lists_of_len n)
+
+open fin fintype
+
+variable [deceqA : decidable_eq A]
+include deceqA
+
+definition all_prodseq_eq_one (n : nat) : list (seq A (succ n)) :=
+dmap (λ l, length l = card (fin (succ n))) list_to_fun (all_prodl_eq_one A n)
+
+end defs
+
+section defs
+
+variables {A : Type} [ambA : group A] [finA : fintype A]
+include ambA finA
+
+open fin
+
+definition prodseq {n : nat} (s : seq A n) : A := Prodl (upto n) s
+
+variable [deceqA : decidable_eq A]
+include deceqA
+
+definition peo [reducible] {n : nat} (s : seq A n) := prodseq s = 1
+
+end defs
+
+section defs
+
+variables (A : Type) [ambA : group A] [finA : fintype A] [deceqA : decidable_eq A]
+include ambA finA deceqA
+
+open fin
+
+definition peo_seq (n : nat) := {s : seq A (succ n) | peo s}
+
+definition all_peo_seqs (n : nat) : list (peo_seq A n) :=
+dmap peo tag (all_prodseq_eq_one A n)
+
+end defs
+
+section
+
 variable {A : Type}
 variable [ambA : group A]
 include ambA
@@ -40,21 +96,18 @@ begin rewrite [eq_inv_iff_eq_inv], apply eq.symm, exact inv_eq_of_mul_eq_one H e
 variable [finA : fintype A]
 include finA
 
-definition all_prodl_eq_one (n : nat) : list (list A) :=
-map (λ l, cons (Prodl l id)⁻¹ l) (all_lists_of_len n)
-
-lemma prodl_eq_one_of_mem_all_prodl_eq_one {n : nat} {l : list A} : l ∈ all_prodl_eq_one n → Prodl l id = 1 :=
+lemma prodl_eq_one_of_mem_all_prodl_eq_one {n : nat} {l : list A} : l ∈ all_prodl_eq_one A n → Prodl l id = 1 :=
 assume Plin, obtain l' Pl' Pl, from exists_of_mem_map Plin,
 by substvars; rewrite [Prodl_cons id _ l', mul.left_inv]
 
-lemma length_of_mem_all_prodl_eq_one {n : nat} {l : list A} : l ∈ all_prodl_eq_one n → length l = succ n :=
+lemma length_of_mem_all_prodl_eq_one {n : nat} {l : list A} : l ∈ all_prodl_eq_one A n → length l = succ n :=
 assume Plin, obtain l' Pl' Pl, from exists_of_mem_map Plin,
 begin substvars, rewrite [length_cons, length_mem_all_lists Pl'] end
 
-lemma nodup_all_prodl_eq_one {n : nat} : nodup (@all_prodl_eq_one A _ _ n) :=
+lemma nodup_all_prodl_eq_one {n : nat} : nodup (all_prodl_eq_one A n) :=
 nodup_map (take l₁ l₂ Peq, tail_eq_of_cons_eq Peq) nodup_all_lists
 
-lemma all_prodl_eq_one_complete {n : nat} : ∀ {l : list A}, length l = succ n → Prodl l id = 1 → l ∈ all_prodl_eq_one n
+lemma all_prodl_eq_one_complete {n : nat} : ∀ {l : list A}, length l = succ n → Prodl l id = 1 → l ∈ all_prodl_eq_one A n
 | nil    := assume Pleq, by contradiction
 | (a::l) := assume Pleq Pprod,
   begin
@@ -73,35 +126,86 @@ open fin
 variable [deceqA : decidable_eq A]
 include deceqA
 
-definition all_prodseq_eq_one (n : nat) : list (seq A (succ n)) :=
-dmap (λ l, length l = card (fin (succ n))) list_to_fun (all_prodl_eq_one n)
-
-definition prodseq {n : nat} (s : seq A n) : A := Prodl (upto n) s
-
 lemma prodseq_eq {n :nat} {s : seq A n} : prodseq s = Prodl (fun_to_list s) id :=
 Prodl_map
 
 lemma prodseq_eq_one_of_mem_all_prodseq_eq_one {n : nat} {s : seq A (succ n)} :
-  s ∈ all_prodseq_eq_one n → prodseq s = 1 :=
+  s ∈ all_prodseq_eq_one A n → prodseq s = 1 :=
 assume Psin, obtain l Pex, from exists_of_mem_dmap Psin,
 obtain leq Pin Peq, from Pex,
 by rewrite [prodseq_eq, Peq, list_to_fun_to_list, prodl_eq_one_of_mem_all_prodl_eq_one Pin]
 
 lemma all_prodseq_eq_one_complete {n : nat} {s : seq A (succ n)} :
-  prodseq s = 1 → s ∈ all_prodseq_eq_one n :=
+  prodseq s = 1 → s ∈ all_prodseq_eq_one A n :=
 assume Peq,
-assert Plin : map s (elems (fin (succ n))) ∈ all_prodl_eq_one n,
+assert Plin : map s (elems (fin (succ n))) ∈ all_prodl_eq_one A n,
   from begin
   apply all_prodl_eq_one_complete,
     rewrite [length_map], exact length_upto (succ n),
     rewrite prodseq_eq at Peq, exact Peq
   end,
-assert Psin : list_to_fun (map s (elems (fin (succ n)))) (length_map_of_fintype s) ∈ all_prodseq_eq_one n,
+assert Psin : list_to_fun (map s (elems (fin (succ n)))) (length_map_of_fintype s) ∈ all_prodseq_eq_one A n,
   from mem_dmap _ Plin,
 by rewrite [fun_eq_list_to_fun_map s (length_map_of_fintype s)]; apply Psin
 
-lemma nodup_all_prodseq_eq_one {n : nat} : nodup (@all_prodseq_eq_one A _ _ _ n) :=
+lemma nodup_all_prodseq_eq_one {n : nat} : nodup (all_prodseq_eq_one A n) :=
 dmap_nodup_of_dinj dinj_list_to_fun nodup_all_prodl_eq_one
+
+lemma rotl1_peo_of_peo {n : nat} {s : seq A n} : peo s → peo (rotl_fun 1 s) :=
+begin rewrite [↑peo, *prodseq_eq, seq_rotl_eq_list_rotl], apply prodl_rotl_eq_one_of_prodl_eq_one end
+
+section
+local attribute perm.f [coercion]
+
+lemma rotl_perm_peo_of_peo {n : nat} : ∀ {m} {s : seq A n}, peo s → peo (rotl_perm A n m s)
+| 0        := begin rewrite [↑rotl_perm, rotl_seq_zero], intros, assumption end
+| (succ m) := take s,
+  assert Pmul : rotl_perm A n (m + 1) s = rotl_fun 1 (rotl_perm A n m s), from
+    calc s ∘ (rotl (m + 1)) = s ∘ ((rotl m) ∘ (rotl 1)) : rotl_compose
+                        ... = s ∘ (rotl m) ∘ (rotl 1) : compose.assoc,
+  begin
+  rewrite [-add_one, Pmul], intro P,
+  exact rotl1_peo_of_peo (rotl_perm_peo_of_peo P)
+  end
+
+end
+
+lemma nodup_all_peo_seqs {n : nat} : nodup (all_peo_seqs A n) :=
+dmap_nodup_of_dinj (dinj_tag peo) nodup_all_prodseq_eq_one
+
+lemma all_peo_seqs_complete {n : nat} : ∀ s : peo_seq A n, s ∈ all_peo_seqs A n :=
+take ps, subtype.destruct ps (take s, assume Ps,
+  assert Pin : s ∈ all_prodseq_eq_one A n, from all_prodseq_eq_one_complete Ps,
+  mem_dmap Ps Pin)
+
+definition peo_seq_is_fintype [instance] {n : nat} : fintype (peo_seq A n) :=
+fintype.mk (all_peo_seqs A n) nodup_all_peo_seqs all_peo_seqs_complete
+
+end
+
+section defs
+variables (A : Type) [ambA : group A] [finA : fintype A] [deceqA : decidable_eq A]
+include ambA finA deceqA
+
+local attribute perm.f [coercion]
+
+definition rotl_peo_seq (n : nat) (m : nat) (s : peo_seq A n) : peo_seq A n :=
+tag (rotl_perm A (succ n) m (elt_of s)) (rotl_perm_peo_of_peo (has_property s))
+
+end defs
+
+section
+variables {A : Type} [ambA : group A] [finA : fintype A] [deceqA : decidable_eq A]
+include ambA finA deceqA
+
+local attribute perm.f [coercion]
+check @injective
+
+lemma rotl_peo_seq_inj {n m : nat} : injective (rotl_peo_seq A n m) :=
+take ps₁ ps₂, subtype.destruct ps₁ (λ s₁ P₁, subtype.destruct ps₂ (λ s₂ P₂,
+  assume Peq, tag_eq (rotl_fun_inj (dinj_tag peo _ _ Peq))))
+
+end
 
 end cauchy
 end group
