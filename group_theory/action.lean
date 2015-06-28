@@ -9,19 +9,36 @@ import algebra.group data .hom .perm .finsubg
 namespace group
 open finset algebra function
 
+section def
+variables (G S : Type) [ambientG : group G] [finS : fintype S] [deceqS : decidable_eq S]
+include ambientG finS deceqS
+
+structure action : Type :=
+(f : G → perm S) (H : finset G) (hom_on : ∀ a b, a ∈ H → b ∈ H → f (a*b) = (f a) * (f b))
+
+structure action' (H : finset G) : Type :=
+(f : G → perm S) (hom_on : ∀ a b, a ∈ H → b ∈ H → f (a*b) = (f a) * (f b))
+
+variables (A : action G S) [subgH : is_finsubg (action.H A)]
+include subgH
+
+end def
+
 local attribute perm.f [coercion]
+local attribute action.f [coercion]
 
 section def
-variables {G S : Type}
-variable [ambientG : group G]
-include ambientG
-variable [finS : fintype S]
-include finS
-variable [deceqS : decidable_eq S]
-include deceqS
+variables {G S : Type} [ambientG : group G] [finS : fintype S] [deceqS : decidable_eq S]
+include ambientG finS deceqS
 
 definition orbit (hom : G → perm S) (H : finset G) (a : S) : finset S :=
            image (move_by a) (image hom H)
+
+definition action_perms (A : action G S) : finset (perm S) :=
+image (action.f A) (action.H A)
+
+definition orbit₁ (A : action G S) (a : S) : finset S :=
+image (move_by a) (action_perms A)
 
 variable [deceqG : decidable_eq G]
 include deceqG -- required by {x ∈ H |p x} filtering
@@ -31,6 +48,9 @@ definition moverset (hom : G → perm S) (H : finset G) (a b : S) : finset G :=
 
 definition stab (hom : G → perm S) (H : finset G) (a : S) : finset G :=
            {f ∈ H | hom f a = a}
+
+definition stab₁ (A : action G S) (a : S) : finset G :=
+           {f ∈ (action.H A) | A f a = a}
 
 end def
 
@@ -60,6 +80,15 @@ lemma exists_of_orbit {b : S} : b ∈ orbit hom H a → ∃ h, h ∈ H ∧ hom h
         hom h a = p a : Ph₂
             ... = b   : Pp₂,
       exists.intro h (and.intro Ph₁ Phab)
+
+lemma exists_of_orbit₁ {A : action G S} {b : S} : b ∈ orbit₁ A a → ∃ h, h ∈ (action.H A) ∧ A h a = b :=
+assume Pb,
+obtain p (Pp₁ : p ∈ action_perms A) (Pp₂ : move_by a p = b), from exists_of_mem_image Pb,
+obtain h (Ph₁ : h ∈ action.H A) (Ph₂ : A h = p), from exists_of_mem_image Pp₁,
+assert Phab : A h a = b, from calc
+  A h a = p a : Ph₂
+    ... = b   : Pp₂,
+exists.intro h (and.intro Ph₁ Phab)
 
 lemma stab_lmul {f g : G} : g ∈ stab hom H a → hom (f*g) a = hom f a :=
       assume Pgstab,

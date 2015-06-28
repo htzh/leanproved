@@ -5,7 +5,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author : Haitao Zhang
 -/
 
-import data algebra.group algebra.group_power algebra.group_bigops .cyclic .finfun .perm
+import data algebra.group algebra.group_power algebra.group_bigops .cyclic  .finsubg .hom .finfun .perm
 
 open nat fin list algebra function subtype
 
@@ -233,12 +233,20 @@ include ambA finA deceqA
 variable [d : decidable_eq (peo_seq A n)]
 include d
 
+open fintype
+check (rotl_perm A n 1)^5
+lemma rotl_perm_ps_eq {m : nat} {s : peo_seq A n} : elt_of (perm.f (rotl_perm_ps A n m) s) = perm.f (rotl_perm A (succ n) m) (elt_of s) := rfl
+
+lemma rotl_perm_ps_eq_of_rotl_perm_eq {i j : nat} :
+  (rotl_perm A (succ n) i) = (rotl_perm A (succ n) j) → (rotl_perm_ps A n i) = (rotl_perm_ps A n j) :=
+assume Peq, eq_of_feq (funext take s, subtype.eq (by rewrite [*rotl_perm_ps_eq, Peq]))
+
 lemma rotl_perm_ps_pow_eq : ∀ {i : nat}, (rotl_perm_ps A n 1)^i = (rotl_perm_ps A n i)
 | 0 := begin rewrite [pow_zero (rotl_perm_ps A n 1), @perm_one (peo_seq A n), -eq_iff_feq, *perm.f_mk, rotl_peo_seq_zero] end
 | (succ i) := begin rewrite [pow_succ (rotl_perm_ps A n 1), rotl_perm_ps_pow_eq, -(one_add i), -eq_iff_feq, ↑rotl_perm_ps, -rotl_peo_seq_compose] end
 
 lemma rotl_perm_ps_pow_eq_one : (rotl_perm_ps A n 1) ^ (succ n) = 1 :=
-eq.trans rotl_perm_ps_pow_eq (eq_of_feq begin rewrite [perm.f_mk] end)
+eq.trans rotl_perm_ps_pow_eq (eq_of_feq begin rewrite [perm.f_mk, rotl_peo_seq_id] end)
 
 end
 
