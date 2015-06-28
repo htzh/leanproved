@@ -27,7 +27,7 @@ lemma mk_succ_ne_zero {n i : nat} : ∀ {P}, mk (succ i) P ≠ zero n :=
 assume P Pe, absurd (veq_of_eq Pe) !succ_ne_zero
 
 lemma madd_mk_mod {n i j : nat} : madd (mk_mod n i) (mk_mod n j) = mk_mod n (i+j) :=
-eq_of_veq begin rewrite [*val_mk, mod_add_mod, add_mod_mod] end
+eq_of_veq begin esimp [madd, mk_mod], rewrite [ mod_add_mod, add_mod_mod ] end
 
 definition diff [reducible] (i j : nat) :=
 if (i < j) then (j - i) else (i - j)
@@ -357,7 +357,7 @@ lemma rotl_id : ∀ {n : nat}, @rotl n n = id
   begin rewrite [rotl_succ', P], apply rotl_zero end
 
 lemma rotl_to_zero {n i : nat} : rotl i (mk_mod n i) = zero n :=
-eq_of_veq begin rewrite [↑rotl, val_madd, *val_mk, mod_add_mod, add_mod_mod, -succ_mul, mul_mod_right] end
+eq_of_veq begin rewrite [↑rotl, val_madd], esimp [mk_mod], rewrite [ mod_add_mod, add_mod_mod, -succ_mul, mul_mod_right] end
 
 lemma rotl_compose : ∀ {n : nat} {j k : nat}, (@rotl n j) ∘ (rotl k) = rotl (j + k)
 | 0        := take j k, funext take i, elim0 i
@@ -366,12 +366,12 @@ lemma rotl_compose : ∀ {n : nat} {j k : nat}, (@rotl n j) ∘ (rotl k) = rotl 
   end
 
 lemma rotr_rotl : ∀ {n : nat} (m : nat) {i : fin n}, rotr m (rotl m i) = i
-| 0        := take m i, elim0 i
-| (succ n) := take m i, calc (-(mk_mod n (n*m))) + ((mk_mod n (n*m)) + i) = i : neg_add_cancel_left
+| 0            := take m i, elim0 i
+| (nat.succ n) := take m i, calc (-(mk_mod n (n*m))) + ((mk_mod n (n*m)) + i) = i : by rewrite neg_add_cancel_left
 
 lemma rotl_rotr : ∀ {n : nat} (m : nat), (@rotl n m) ∘ (rotr m) = id
-| 0        := take m, funext take i, elim0 i
-| (succ n) := take m, funext take i, calc (mk_mod n (n*m)) + (-(mk_mod n (n*m)) + i) = i : add_neg_cancel_left
+| 0            := take m, funext take i, elim0 i
+| (nat.succ n) := take m, funext take i, calc (mk_mod n (n*m)) + (-(mk_mod n (n*m)) + i) = i : add_neg_cancel_left
 
 lemma rotl_succ {n : nat} : (rotl 1) ∘ (@succ n) = lift_succ :=
 funext (take i, eq_of_veq (begin rewrite [↑compose, ↑rotl, ↑madd, mul_one n, ↑mk_mod, mod_add_mod, ↑lift_succ, val_succ, -succ_add_eq_succ_add, add_mod_self_left, mod_eq_of_lt (lt.trans (is_lt i) !lt_succ_self), -val_lift] end))
@@ -393,7 +393,7 @@ lemma rotl_eq_rotl : ∀ {n : nat}, map (rotl 1) (upto n) = list.rotl (upto n)
   congruence,
     rewrite [map_map], congruence, exact rotl_succ,
     rewrite [map_singleton], congruence, rewrite [↑rotl, mul_one n, ↑mk_mod, ↑zero, ↑maxi, ↑madd],
-      congruence, rewrite [ mod_add_mod, nat.add_zero, mod_eq_of_lt !lt_succ_self]
+      congruence, rewrite [ mod_add_mod, nat.add_zero, mod_eq_of_lt !lt_succ_self ]
   end
 
 definition seq [reducible] (A : Type) (n : nat) := fin n → A
@@ -453,11 +453,11 @@ eq_of_feq (funext take f, calc
                       ... = f ∘ (rotl (j+i)) : rotl_compose)
 
 lemma rotl_perm_pow_eq : ∀ {i : nat}, (rotl_perm A n 1) ^ i = rotl_perm A n i
-| 0 := begin rewrite [pow_zero, ↑rotl_perm, perm_one, -eq_iff_feq, *perm.f_mk, rotl_seq_zero]  end
+| 0 := begin rewrite [pow_zero, ↑rotl_perm, perm_one, -eq_iff_feq], esimp, rewrite rotl_seq_zero  end
 | (succ i) := begin rewrite [pow_succ, rotl_perm_pow_eq, rotl_perm_mul, one_add] end
 
 lemma rotl_perm_pow_eq_one : (rotl_perm A n 1) ^ n = 1 :=
-eq.trans rotl_perm_pow_eq (eq_of_feq begin rewrite [perm.f_mk, ↑rotl_fun, rotl_id] end)
+eq.trans rotl_perm_pow_eq (eq_of_feq begin esimp [rotl_perm], rewrite [↑rotl_fun, rotl_id] end)
 
 -- needs A to have at least two elements!
 lemma rotl_perm_pow_ne_one (Pex : ∃ a b : A, a ≠ b) : ∀ i, i < n → (rotl_perm A (succ n) 1)^(succ i) ≠ 1 :=
@@ -470,5 +470,4 @@ lemma rotl_perm_order (Pex : ∃ a b : A, a ≠ b) : order (rotl_perm A (succ n)
 order_of_min_pow rotl_perm_pow_eq_one (rotl_perm_pow_ne_one Pex)
 
 end rotg
-
 end group
