@@ -10,7 +10,6 @@ import data algebra.group algebra.group_power algebra.group_bigops .cyclic .finf
 open nat fin list algebra function subtype
 
 section
-check @tag
 lemma dinj_tag {A : Type} (P : A → Prop) : dinj P tag :=
 take a₁ a₂ Pa₁ Pa₂ Pteq, subtype.no_confusion Pteq (λ Pe Pqe, Pe)
 
@@ -46,20 +45,15 @@ map (λ l, cons (Prodl l id)⁻¹ l) (all_lists_of_len n)
 
 open fin fintype
 
+section
 variable [deceqA : decidable_eq A]
 include deceqA
 
 definition all_prodseq_eq_one (n : nat) : list (seq A (succ n)) :=
 dmap (λ l, length l = card (fin (succ n))) list_to_fun (all_prodl_eq_one A n)
+end
 
-end defs
-
-section defs
-
-variables {A : Type} [ambA : group A] [finA : fintype A]
-include ambA finA
-
-open fin
+variable {A}
 
 definition prodseq {n : nat} (s : seq A n) : A := Prodl (upto n) s
 
@@ -68,14 +62,7 @@ include deceqA
 
 definition peo [reducible] {n : nat} (s : seq A n) := prodseq s = 1
 
-end defs
-
-section defs
-
-variables (A : Type) [ambA : group A] [finA : fintype A] [deceqA : decidable_eq A]
-include ambA finA deceqA
-
-open fin
+variable (A)
 
 definition peo_seq (n : nat) := {s : seq A (succ n) | peo s}
 
@@ -192,12 +179,7 @@ local attribute perm.f [coercion]
 definition rotl_peo_seq (n : nat) (m : nat) (s : peo_seq A n) : peo_seq A n :=
 tag (rotl_perm A (succ n) m (elt_of s)) (rotl_perm_peo_of_peo (has_property s))
 
-end defs
-
-section
-variables {A : Type} [ambA : group A] [finA : fintype A] [deceqA : decidable_eq A]
-include ambA finA deceqA
-
+variable {A}
 local attribute perm.f [coercion]
 
 lemma rotl_peo_seq_zero {n : nat} : rotl_peo_seq A n 0 = id :=
@@ -214,33 +196,24 @@ lemma rotl_peo_seq_inj {n m : nat} : injective (rotl_peo_seq A n m) :=
 take ps₁ ps₂, subtype.destruct ps₁ (λ s₁ P₁, subtype.destruct ps₂ (λ s₂ P₂,
   assume Peq, tag_eq (rotl_fun_inj (dinj_tag peo _ _ Peq))))
 
-end
-
-section defs
-variables (A : Type) [ambA : group A] [finA : fintype A] [deceqA : decidable_eq A]
-include ambA finA deceqA
-open fin fintype
+variable (A)
 
 definition rotl_perm_ps [reducible] (n m : nat) : perm (peo_seq A n) :=
 perm.mk (rotl_peo_seq A n m) rotl_peo_seq_inj
 
-end defs
-
-section
-variables {A : Type} [ambA : group A] [finA : fintype A] [deceqA : decidable_eq A] {n : nat}
-include ambA finA deceqA
-
+variable {A}
+variables {n : nat}
 variable [d : decidable_eq (peo_seq A n)]
 include d
 
 lemma rotl_perm_ps_pow_eq : ∀ {i : nat}, (rotl_perm_ps A n 1)^i = (rotl_perm_ps A n i)
-| 0 := begin rewrite [pow_zero (rotl_perm_ps A n 1), @perm_one (peo_seq A n), -eq_iff_feq, *perm.f_mk, rotl_peo_seq_zero] end
+| 0 := begin rewrite [pow_zero (rotl_perm_ps A n 1), @perm_one (peo_seq A n), -eq_iff_feq], esimp [rotl_perm_ps], rewrite [rotl_peo_seq_zero] end
 | (succ i) := begin rewrite [pow_succ (rotl_perm_ps A n 1), rotl_perm_ps_pow_eq, -(one_add i), -eq_iff_feq, ↑rotl_perm_ps, -rotl_peo_seq_compose] end
 
 lemma rotl_perm_ps_pow_eq_one : (rotl_perm_ps A n 1) ^ (succ n) = 1 :=
-eq.trans rotl_perm_ps_pow_eq (eq_of_feq begin rewrite [perm.f_mk] end)
+eq.trans rotl_perm_ps_pow_eq (eq_of_feq begin esimp [rotl_perm_ps], rewrite [rotl_peo_seq_id] end)
 
-end
+end defs
 
 end cauchy
 end group
