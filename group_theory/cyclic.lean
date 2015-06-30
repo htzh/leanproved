@@ -459,6 +459,11 @@ lemma rotl_perm_pow_eq : ∀ {i : nat}, (rotl_perm A n 1) ^ i = rotl_perm A n i
 lemma rotl_perm_pow_eq_one : (rotl_perm A n 1) ^ n = 1 :=
 eq.trans rotl_perm_pow_eq (eq_of_feq begin esimp [rotl_perm], rewrite [↑rotl_fun, rotl_id] end)
 
+lemma rotl_perm_mod {i : nat} : rotl_perm A n i = rotl_perm A n (i mod n) :=
+calc rotl_perm A n i = (rotl_perm A n 1) ^ i : rotl_perm_pow_eq
+                 ... = (rotl_perm A n 1) ^ (i mod n) : pow_mod rotl_perm_pow_eq_one
+                 ... = rotl_perm A n (i mod n) : rotl_perm_pow_eq
+
 -- needs A to have at least two elements!
 lemma rotl_perm_pow_ne_one (Pex : ∃ a b : A, a ≠ b) : ∀ i, i < n → (rotl_perm A (succ n) 1)^(succ i) ≠ 1 :=
 take i, assume Piltn, begin

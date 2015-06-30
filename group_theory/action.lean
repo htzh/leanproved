@@ -16,12 +16,11 @@ include ambientG finS deceqS
 structure action : Type :=
 (f : G → perm S) (H : finset G) (hom_on : ∀ a b, a ∈ H → b ∈ H → f (a*b) = (f a) * (f b))
 
+variable {G}
 structure action' (H : finset G) : Type :=
 (f : G → perm S) (hom_on : ∀ a b, a ∈ H → b ∈ H → f (a*b) = (f a) * (f b))
 
-variables (A : action G S) [subgH : is_finsubg (action.H A)]
-include subgH
-
+check @action'
 end def
 
 local attribute perm.f [coercion]
@@ -66,6 +65,17 @@ include deceqS
 variable [deceqG : decidable_eq G]
 include deceqG
 
+lemma exists_of_orbit₁ {A : action G S} {a b : S} : b ∈ orbit₁ A a → ∃ h, h ∈ (action.H A) ∧ A h a = b :=
+assume Pb,
+obtain p (Pp₁ : p ∈ action_perms A) (Pp₂ : move_by a p = b), from exists_of_mem_image Pb,
+obtain h (Ph₁ : h ∈ action.H A) (Ph₂ : A h = p), from exists_of_mem_image Pp₁,
+assert Phab : A h a = b, from calc
+  A h a = p a : Ph₂
+    ... = b   : Pp₂,
+exists.intro h (and.intro Ph₁ Phab)
+
+check @exists_of_orbit₁
+
 -- these are already specified by stab hom H a
 variables {hom : G → perm S} {H : finset G} {a : S}
 
@@ -80,15 +90,6 @@ lemma exists_of_orbit {b : S} : b ∈ orbit hom H a → ∃ h, h ∈ H ∧ hom h
         hom h a = p a : Ph₂
             ... = b   : Pp₂,
       exists.intro h (and.intro Ph₁ Phab)
-
-lemma exists_of_orbit₁ {A : action G S} {b : S} : b ∈ orbit₁ A a → ∃ h, h ∈ (action.H A) ∧ A h a = b :=
-assume Pb,
-obtain p (Pp₁ : p ∈ action_perms A) (Pp₂ : move_by a p = b), from exists_of_mem_image Pb,
-obtain h (Ph₁ : h ∈ action.H A) (Ph₂ : A h = p), from exists_of_mem_image Pp₁,
-assert Phab : A h a = b, from calc
-  A h a = p a : Ph₂
-    ... = b   : Pp₂,
-exists.intro h (and.intro Ph₁ Phab)
 
 lemma stab_lmul {f g : G} : g ∈ stab hom H a → hom (f*g) a = hom f a :=
       assume Pgstab,
