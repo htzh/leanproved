@@ -9,22 +9,7 @@ import algebra.group data .hom .perm .finsubg
 namespace group
 open finset algebra function
 
-section def
-variables (G S : Type) [ambientG : group G] [finS : fintype S] [deceqS : decidable_eq S]
-include ambientG finS deceqS
-
-structure action : Type :=
-(f : G → perm S) (H : finset G) (hom_on : ∀ a b, a ∈ H → b ∈ H → f (a*b) = (f a) * (f b))
-
-variable {G}
-structure action' (H : finset G) : Type :=
-(f : G → perm S) (hom_on : ∀ a b, a ∈ H → b ∈ H → f (a*b) = (f a) * (f b))
-
-check @action'
-end def
-
 local attribute perm.f [coercion]
-local attribute action.f [coercion]
 
 section def
 variables {G S : Type} [ambientG : group G] [finS : fintype S] [deceqS : decidable_eq S]
@@ -32,12 +17,6 @@ include ambientG finS deceqS
 
 definition orbit (hom : G → perm S) (H : finset G) (a : S) : finset S :=
            image (move_by a) (image hom H)
-
-definition action_perms (A : action G S) : finset (perm S) :=
-image (action.f A) (action.H A)
-
-definition orbit₁ (A : action G S) (a : S) : finset S :=
-image (move_by a) (action_perms A)
 
 variable [deceqG : decidable_eq G]
 include deceqG -- required by {x ∈ H |p x} filtering
@@ -47,9 +26,6 @@ definition moverset (hom : G → perm S) (H : finset G) (a b : S) : finset G :=
 
 definition stab (hom : G → perm S) (H : finset G) (a : S) : finset G :=
            {f ∈ H | hom f a = a}
-
-definition stab₁ (A : action G S) (a : S) : finset G :=
-           {f ∈ (action.H A) | A f a = a}
 
 end def
 
@@ -62,24 +38,10 @@ variable [finS : fintype S]
 include finS
 variable [deceqS : decidable_eq S]
 include deceqS
-variable [deceqG : decidable_eq G]
-include deceqG
 
-lemma exists_of_orbit₁ {A : action G S} {a b : S} : b ∈ orbit₁ A a → ∃ h, h ∈ (action.H A) ∧ A h a = b :=
-assume Pb,
-obtain p (Pp₁ : p ∈ action_perms A) (Pp₂ : move_by a p = b), from exists_of_mem_image Pb,
-obtain h (Ph₁ : h ∈ action.H A) (Ph₂ : A h = p), from exists_of_mem_image Pp₁,
-assert Phab : A h a = b, from calc
-  A h a = p a : Ph₂
-    ... = b   : Pp₂,
-exists.intro h (and.intro Ph₁ Phab)
+section
 
-check @exists_of_orbit₁
-
--- these are already specified by stab hom H a
-variables {hom : G → perm S} {H : finset G} {a : S}
-
-variable [Hom : is_hom_class hom]
+variables {hom : G → perm S} {H : finset G} {a : S} [Hom : is_hom_class hom]
 include Hom
 
 lemma exists_of_orbit {b : S} : b ∈ orbit hom H a → ∃ h, h ∈ H ∧ hom h a = b :=
@@ -90,6 +52,21 @@ lemma exists_of_orbit {b : S} : b ∈ orbit hom H a → ∃ h, h ∈ H ∧ hom h
         hom h a = p a : Ph₂
             ... = b   : Pp₂,
       exists.intro h (and.intro Ph₁ Phab)
+
+lemma orbit_of_exists {b : S} : (∃ h, h ∈ H ∧ hom h a = b) → b ∈ orbit hom H a :=
+assume Pex, obtain h PinH Phab, from Pex,
+mem_image_of_mem_of_eq (mem_image_of_mem hom PinH) Phab
+
+end
+
+variable [deceqG : decidable_eq G]
+include deceqG
+
+-- these are already specified by stab hom H a
+variables {hom : G → perm S} {H : finset G} {a : S}
+
+variable [Hom : is_hom_class hom]
+include Hom
 
 lemma stab_lmul {f g : G} : g ∈ stab hom H a → hom (f*g) a = hom f a :=
       assume Pgstab,
@@ -230,6 +207,44 @@ theorem orbit_stabilizer_theorem : card H = card (orbit hom H a) * card (stab ho
         ... = card (orbit hom H a) * card (stab hom H a) : card_image_eq_of_inj_on moverset_inj_on_orbit
 
 end orbit_stabilizer
+
+section orbit_partition
+
+variables {G S : Type} [ambientG : group G] [finS : fintype S]
+variables [deceqS : decidable_eq S]
+include ambientG finS deceqS
+variables {hom : G → perm S} [Hom : is_hom_class hom] {H : finset G} [subgH : is_finsubg H]
+include Hom subgH
+
+lemma self_in_orbit {a : S} : a ∈ orbit hom H a :=
+mem_image_of_mem_of_eq (mem_image_of_mem_of_eq (finsubg_has_one H) (hom_map_one hom)) rfl
+
+lemma orbit_is_partition : is_partition (orbit hom H) :=
+take a b, propext (iff.intro
+  (assume Painb, obtain h PhinH Phba, from exists_of_orbit Painb,
+  assert Phinvab : perm.f (hom h)⁻¹ a = b, from
+    calc perm.f (hom h)⁻¹ a = perm.f (hom h)⁻¹ ((hom h) b) : Phba
+                        ... = perm.f ((hom h)⁻¹ * (hom h)) b : rfl
+                        ... = perm.f (1 : perm S) b : mul.left_inv,
+  ext take c, iff.intro
+    (assume Pcina, obtain g PginH Pgac, from exists_of_orbit Pcina,
+      orbit_of_exists (exists.intro (g*h) (and.intro
+        (finsubg_mul_closed H _ _ PginH PhinH)
+        (calc hom (g*h) b = perm.f ((hom g) * (hom h)) b : is_hom hom
+                      ... = ((hom g) ∘ (hom h)) b : rfl
+                      ... = (hom g) a : Phba
+                      ... = c : Pgac))))
+    (assume Pcinb, obtain g PginH Pgbc, from exists_of_orbit Pcinb,
+      orbit_of_exists (exists.intro (g*h⁻¹) (and.intro
+        (finsubg_mul_closed H _ _ PginH (finsubg_has_inv H _ PhinH))
+        (calc (hom (g * h⁻¹)) a = perm.f ((hom g) * (hom h⁻¹)) a : is_hom hom
+                            ... = perm.f ((hom g) * (hom h)⁻¹) a : hom_map_inv hom h
+                            ... = ((hom g) ∘ (hom h)⁻¹) a : rfl
+                            ... = (hom g) b : Phinvab
+                            ... = c : Pgbc)))))
+  (assume Peq, Peq ▸ self_in_orbit))
+
+end orbit_partition
 
 section cayley
 variables {G : Type}
