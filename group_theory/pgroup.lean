@@ -41,7 +41,7 @@ include Hom subgH
 open finset.partition
 
 lemma card_mod_eq_of_action_by_psubg (p : nat) {m : nat} :
-  psubg H p m → (card S) mod p = (card (fixed_point_orbits hom H)) mod p :=
+  psubg H p m → (card S) mod p = (card (fixed_points hom H)) mod p :=
 take Ppsubg, begin
   rewrite [@orbit_class_equation' G S ambientG finS deceqS hom Hom H subgH],
   apply add_mod_eq_of_dvd, apply dvd_Sum_of_dvd,

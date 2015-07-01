@@ -18,6 +18,12 @@ include ambientG finS deceqS
 definition orbit (hom : G → perm S) (H : finset G) (a : S) : finset S :=
            image (move_by a) (image hom H)
 
+definition fixed_points (hom : G → perm S) (H : finset G) : finset S :=
+{a ∈ univ | orbit hom H a = singleton a}
+
+definition is_fixed_point (hom : G → perm S) (H : finset G) (a : S) : Prop :=
+∀ h, h ∈ H → hom h a = a
+
 variable [deceqG : decidable_eq G]
 include deceqG -- required by {x ∈ H |p x} filtering
 
@@ -57,6 +63,10 @@ lemma orbit_of_exists {b : S} : (∃ h, h ∈ H ∧ hom h a = b) → b ∈ orbit
 assume Pex, obtain h PinH Phab, from Pex,
 mem_image_of_mem_of_eq (mem_image_of_mem hom PinH) Phab
 
+lemma is_fixed_point_of_mem_fixed_points : a ∈ fixed_points hom H → is_fixed_point hom H a :=
+assume Pain, take h, assume Phin,
+  eq_of_mem_singleton
+    (of_mem_filter Pain ▸ orbit_of_exists (exists.intro h (and.intro Phin rfl)))
 end
 
 variable [deceqG : decidable_eq G]
@@ -212,6 +222,8 @@ section partition
 variables {A B : Type} [deceqA : decidable_eq A] [deceqB : decidable_eq B]
 include deceqA
 
+lemma eq_of_singleton_eq {a b : A} : singleton a = singleton b → a = b := sorry
+
 lemma binary_union (P : A → Prop) [decP : decidable_pred P] {S : finset A} :
   S = {a ∈ S | P a} ∪ {a ∈ S | ¬(P a)} :=
 ext take a, iff.intro
@@ -319,6 +331,44 @@ definition fixed_point_orbits : finset (finset S) :=
 
 variables {hom} {H}
 
+lemma exists_of_mem_orbits (orb : finset S) :
+  orb ∈ orbits hom H → ∃ a : S, orbit hom H a = orb :=
+begin
+  esimp [orbits, equiv_classes, orbit_partition],
+  rewrite [mem_image_iff],
+  intro Pex, cases Pex with a Pa,
+  existsi a, exact and.right Pa
+end
+
+lemma fixed_point_orbits_eq : fixed_point_orbits hom H = image (orbit hom H) (fixed_points hom H) :=
+ext take s, iff.intro
+  (assume Pin,
+   obtain Psin Ps, from iff.elim_left !mem_filter_iff Pin,
+   obtain a Pa, from exists_of_mem_orbits s Psin,
+   mem_image_of_mem_of_eq
+     (mem_filter_of_mem !mem_univ (eq.symm
+       (eq_of_card_eq_of_subset (by rewrite [card_singleton, Pa, Ps])
+         (subset_of_forall
+           take x, assume Pxin, eq_of_mem_singleton Pxin ▸ in_orbit_refl))))
+     Pa)
+  (assume Pin,
+   obtain a Pain Porba, from exists_of_mem_image Pin,
+   mem_filter_of_mem
+     (begin esimp [orbits, equiv_classes, orbit_partition], rewrite [mem_image_iff],
+       existsi a, exact and.intro !mem_univ Porba end)
+     (begin substvars, rewrite [of_mem_filter Pain] end))
+
+lemma orbit_inj_on_fixed_points : set.inj_on (orbit hom H) (ts (fixed_points hom H)) :=
+take a₁ a₂, begin
+  rewrite [-*mem_eq_mem_to_set, ↑fixed_points, *mem_filter_iff],
+  intro Pa₁ Pa₂,
+  rewrite [and.right Pa₁, and.right Pa₂],
+  exact eq_of_singleton_eq
+end
+
+lemma card_fixed_point_orbits_eq : card (fixed_point_orbits hom H) = card (fixed_points hom H) :=
+by rewrite fixed_point_orbits_eq; apply card_image_eq_of_inj_on orbit_inj_on_fixed_points
+
 lemma orbit_class_equation : card S = Sum (orbits hom H) card :=
 class_equation (orbit_partition hom H)
 
@@ -327,10 +377,11 @@ calc Sum _ _ = Sum (fixed_point_orbits hom H) (λ x, 1) : Sum_ext (take c Pin, o
          ... = card (fixed_point_orbits hom H) * 1 : Sum_const_eq_card_mul
          ... = card (fixed_point_orbits hom H) : mul_one (card (fixed_point_orbits hom H))
 
-lemma orbit_class_equation' : card S = card (fixed_point_orbits hom H) + Sum {cls ∈ orbits hom H | card cls ≠ 1} card :=
+lemma orbit_class_equation' : card S = card (fixed_points hom H) + Sum {cls ∈ orbits hom H | card cls ≠ 1} card :=
 calc card S = Sum (orbits hom H) finset.card : orbit_class_equation
         ... = Sum (fixed_point_orbits hom H) finset.card + Sum {cls ∈ orbits hom H | card cls ≠ 1} card : card_binary_Union_disjoint_sets _ (equiv_class_disjoint _)
         ... = card (fixed_point_orbits hom H) + Sum {cls ∈ orbits hom H | card cls ≠ 1} card : card_fixed_point_orbits
+        ... = card (fixed_points hom H) + Sum {cls ∈ orbits hom H | card cls ≠ 1} card : card_fixed_point_orbits_eq
 
 end orbit_partition
 
