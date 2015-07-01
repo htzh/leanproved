@@ -323,7 +323,7 @@ definition upto_step : ∀ {n : nat}, fin.upto (succ n) = (map succ (upto n))++[
 
 section
 local attribute group_of_add_group [instance]
-
+local infix ^ := algebra.pow
 lemma pow_eq_mul {n : nat} {i : fin (succ n)} : ∀ {k : nat}, i^k = mk_mod n (i*k)
 | 0        := by rewrite [pow_zero]
 | (succ k) := begin
