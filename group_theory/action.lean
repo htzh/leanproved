@@ -226,11 +226,39 @@ lemma binary_inter_empty {P : A → Prop} [decP : decidable_pred P] {S : finset 
   {a ∈ S | P a} ∩ {a ∈ S | ¬(P a)} = ∅ :=
 inter_eq_empty (take a, assume Pa nPa, absurd (of_mem_filter Pa) (of_mem_filter nPa))
 
+definition disjoint_sets (S : finset (finset A)) : Prop :=
+  ∀ s₁ s₂ (P₁ : s₁ ∈ S) (P₂ : s₂ ∈ S), s₁ ≠ s₂ → s₁ ∩ s₂ = ∅
+
+lemma disjoint_sets_filter_of_disjoint_sets {P : finset A → Prop} [decP : decidable_pred P] {S : finset (finset A)} :
+  disjoint_sets S → disjoint_sets {s ∈ S | P s} :=
+assume Pds, take s₁ s₂, assume P₁ P₂, Pds s₁ s₂ (mem_of_mem_filter P₁) (mem_of_mem_filter P₂)
+
+lemma binary_inter_empty_Union_disjoint_sets {P : finset A → Prop} [decP : decidable_pred P] {S : finset (finset A)} :
+  disjoint_sets S → Union {s ∈ S | P s} id ∩ Union {s ∈ S | ¬P s} id = ∅ :=
+assume Pds, inter_eq_empty (take a, assume Pa nPa,
+  obtain s Psin Pains, from iff.elim_left !mem_Union_iff Pa,
+  obtain t Ptin Paint, from iff.elim_left !mem_Union_iff nPa,
+  assert Pneq : s ≠ t,
+    from assume Peq, absurd (Peq ▸ of_mem_filter Psin) (of_mem_filter Ptin),
+  Pds s t (mem_of_mem_filter Psin) (mem_of_mem_filter Ptin) Pneq ▸ mem_inter Pains Paint)
+
+section
 include deceqB
 
 lemma binary_Union (f : A → finset B) {P : A → Prop} [decP : decidable_pred P] {s : finset A} :
   Union s f = Union {a ∈ s | P a} f ∪ Union {a ∈ s | ¬P a} f :=
 begin rewrite [binary_union P at {1}], apply Union_union, exact binary_inter_empty end
+
+end
+
+open nat
+lemma card_binary_Union_disjoint_sets (P : finset A → Prop) [decP : decidable_pred P] {S : finset (finset A)} :
+  disjoint_sets S → Sum S card = Sum {s ∈ S | P s} card + Sum {s ∈ S | ¬P s} card :=
+assume Pds, calc
+  Sum S card = card (Union S id) : card_Union_of_disjoint S id Pds
+         ... = card (Union {s ∈ S | P s} id ∪ Union {s ∈ S | ¬P s} id) : binary_Union
+         ... = card (Union {s ∈ S | P s} id) + card (Union {s ∈ S | ¬P s} id) : card_union_of_disjoint (binary_inter_empty_Union_disjoint_sets Pds)
+         ... = Sum {s ∈ S | P s} card + Sum {s ∈ S | ¬P s} card : by rewrite [*(card_Union_of_disjoint _ id (disjoint_sets_filter_of_disjoint_sets Pds))]
 
 end partition
 
@@ -284,10 +312,25 @@ definition orbit_partition : @partition S _ :=
 mk univ (orbit hom H) orbit_is_partition
   (restriction_imp_union (orbit hom H) orbit_is_partition (λ a Pa, !subset_univ))
 
+definition orbits : finset (finset S) := equiv_classes (orbit_partition hom H)
+
+definition fixed_point_orbits : finset (finset S) :=
+  {cls ∈ orbits hom H | card cls = 1}
+
 variables {hom} {H}
 
-lemma orbit_class_equation : card S = Sum (equiv_classes (orbit_partition hom H)) card :=
+lemma orbit_class_equation : card S = Sum (orbits hom H) card :=
 class_equation (orbit_partition hom H)
+
+lemma card_fixed_point_orbits : Sum (fixed_point_orbits hom H) card = card (fixed_point_orbits hom H) :=
+calc Sum _ _ = Sum (fixed_point_orbits hom H) (λ x, 1) : Sum_ext (take c Pin, of_mem_filter Pin)
+         ... = card (fixed_point_orbits hom H) * 1 : Sum_const_eq_card_mul
+         ... = card (fixed_point_orbits hom H) : mul_one (card (fixed_point_orbits hom H))
+
+lemma orbit_class_equation' : card S = card (fixed_point_orbits hom H) + Sum {cls ∈ orbits hom H | card cls ≠ 1} card :=
+calc card S = Sum (orbits hom H) finset.card : orbit_class_equation
+        ... = Sum (fixed_point_orbits hom H) finset.card + Sum {cls ∈ orbits hom H | card cls ≠ 1} card : card_binary_Union_disjoint_sets _ (equiv_class_disjoint _)
+        ... = card (fixed_point_orbits hom H) + Sum {cls ∈ orbits hom H | card cls ≠ 1} card : card_fixed_point_orbits
 
 end orbit_partition
 
