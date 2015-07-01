@@ -208,6 +208,32 @@ theorem orbit_stabilizer_theorem : card H = card (orbit hom H a) * card (stab ho
 
 end orbit_stabilizer
 
+section partition
+variables {A B : Type} [deceqA : decidable_eq A] [deceqB : decidable_eq B]
+include deceqA
+
+lemma binary_union (P : A → Prop) [decP : decidable_pred P] {S : finset A} :
+  S = {a ∈ S | P a} ∪ {a ∈ S | ¬(P a)} :=
+ext take a, iff.intro
+  (assume Pin, decidable.by_cases
+    (λ Pa : P a, mem_union_l (mem_filter_of_mem Pin Pa))
+    (λ nPa, mem_union_r (mem_filter_of_mem Pin nPa)))
+  (assume Pinu, or.elim (mem_or_mem_of_mem_union Pinu)
+    (assume Pin, mem_of_mem_filter Pin)
+    (assume Pin, mem_of_mem_filter Pin))
+
+lemma binary_inter_empty {P : A → Prop} [decP : decidable_pred P] {S : finset A} :
+  {a ∈ S | P a} ∩ {a ∈ S | ¬(P a)} = ∅ :=
+inter_eq_empty (take a, assume Pa nPa, absurd (of_mem_filter Pa) (of_mem_filter nPa))
+
+include deceqB
+
+lemma binary_Union (f : A → finset B) {P : A → Prop} [decP : decidable_pred P] {s : finset A} :
+  Union s f = Union {a ∈ s | P a} f ∪ Union {a ∈ s | ¬P a} f :=
+begin rewrite [binary_union P at {1}], apply Union_union, exact binary_inter_empty end
+
+end partition
+
 section orbit_partition
 
 variables {G S : Type} [ambientG : group G] [finS : fintype S]
@@ -216,33 +242,52 @@ include ambientG finS deceqS
 variables {hom : G → perm S} [Hom : is_hom_class hom] {H : finset G} [subgH : is_finsubg H]
 include Hom subgH
 
-lemma self_in_orbit {a : S} : a ∈ orbit hom H a :=
+lemma in_orbit_refl {a : S} : a ∈ orbit hom H a :=
 mem_image_of_mem_of_eq (mem_image_of_mem_of_eq (finsubg_has_one H) (hom_map_one hom)) rfl
+
+lemma in_orbit_trans {a b c : S} :
+  a ∈ orbit hom H b → b ∈ orbit hom H c → a ∈ orbit hom H c :=
+assume Painb Pbinc,
+obtain h PhinH Phba, from exists_of_orbit Painb,
+obtain g PginH Pgcb, from exists_of_orbit Pbinc,
+orbit_of_exists (exists.intro (h*g) (and.intro
+  (finsubg_mul_closed H _ _ PhinH PginH)
+  (calc hom (h*g) c = perm.f ((hom h) * (hom g)) c : is_hom hom
+                ... = ((hom h) ∘ (hom g)) c : rfl
+                ... = (hom h) b : Pgcb
+                ... = a : Phba)))
+
+lemma in_orbit_symm {a b : S} : a ∈ orbit hom H b → b ∈ orbit hom H a :=
+assume Painb, obtain h PhinH Phba, from exists_of_orbit Painb,
+assert Phinvab : perm.f (hom h)⁻¹ a = b, from
+  calc perm.f (hom h)⁻¹ a = perm.f (hom h)⁻¹ ((hom h) b) : Phba
+                      ... = perm.f ((hom h)⁻¹ * (hom h)) b : rfl
+                      ... = perm.f (1 : perm S) b : mul.left_inv,
+orbit_of_exists (exists.intro h⁻¹ (and.intro
+  (finsubg_has_inv H _ PhinH)
+  (calc (hom h⁻¹) a = perm.f (hom h)⁻¹ a : hom_map_inv hom h
+                ... = b : Phinvab)))
 
 lemma orbit_is_partition : is_partition (orbit hom H) :=
 take a b, propext (iff.intro
   (assume Painb, obtain h PhinH Phba, from exists_of_orbit Painb,
-  assert Phinvab : perm.f (hom h)⁻¹ a = b, from
-    calc perm.f (hom h)⁻¹ a = perm.f (hom h)⁻¹ ((hom h) b) : Phba
-                        ... = perm.f ((hom h)⁻¹ * (hom h)) b : rfl
-                        ... = perm.f (1 : perm S) b : mul.left_inv,
   ext take c, iff.intro
-    (assume Pcina, obtain g PginH Pgac, from exists_of_orbit Pcina,
-      orbit_of_exists (exists.intro (g*h) (and.intro
-        (finsubg_mul_closed H _ _ PginH PhinH)
-        (calc hom (g*h) b = perm.f ((hom g) * (hom h)) b : is_hom hom
-                      ... = ((hom g) ∘ (hom h)) b : rfl
-                      ... = (hom g) a : Phba
-                      ... = c : Pgac))))
+    (assume Pcina, in_orbit_trans Pcina Painb)
     (assume Pcinb, obtain g PginH Pgbc, from exists_of_orbit Pcinb,
-      orbit_of_exists (exists.intro (g*h⁻¹) (and.intro
-        (finsubg_mul_closed H _ _ PginH (finsubg_has_inv H _ PhinH))
-        (calc (hom (g * h⁻¹)) a = perm.f ((hom g) * (hom h⁻¹)) a : is_hom hom
-                            ... = perm.f ((hom g) * (hom h)⁻¹) a : hom_map_inv hom h
-                            ... = ((hom g) ∘ (hom h)⁻¹) a : rfl
-                            ... = (hom g) b : Phinvab
-                            ... = c : Pgbc)))))
-  (assume Peq, Peq ▸ self_in_orbit))
+      in_orbit_trans Pcinb (in_orbit_symm Painb)))
+  (assume Peq, Peq ▸ in_orbit_refl))
+
+variables (hom) (H)
+open nat finset.partition fintype
+
+definition orbit_partition : @partition S _ :=
+mk univ (orbit hom H) orbit_is_partition
+  (restriction_imp_union (orbit hom H) orbit_is_partition (λ a Pa, !subset_univ))
+
+variables {hom} {H}
+
+lemma orbit_class_equation : card S = Sum (equiv_classes (orbit_partition hom H)) card :=
+class_equation (orbit_partition hom H)
 
 end orbit_partition
 
