@@ -5,7 +5,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author : Haitao Zhang
 -/
 
-import data algebra.group algebra.group_power algebra.group_bigops .cyclic  .finsubg .hom .finfun .perm
+import data algebra.group algebra.group_power algebra.group_bigops .cyclic  .finsubg .hom .finfun .perm .action
 
 open nat fin list algebra function subtype
 
@@ -16,6 +16,55 @@ take a₁ a₂ Pa₁ Pa₂ Pteq, subtype.no_confusion Pteq (λ Pe Pqe, Pe)
 end
 
 namespace group
+
+section pgroup
+
+definition is_prime : nat → Prop := sorry
+lemma divisor_of_prime (p i : nat) : is_prime p → i ∣ p → i = 1 ∨ i = p := sorry
+lemma divisor_of_prime_pow {p m i : nat} : is_prime p → i ∣ (p^m) → i = 1 ∨ p ∣ i := sorry
+lemma add_mod_eq_of_dvd (i j n : nat) : n ∣ j → (i + j) mod n = i mod n := sorry
+lemma dvd_of_eq_mul (i j n : nat) : n = j*i → j ∣ n := sorry
+
+open finset fintype
+
+lemma dvd_Sum_of_dvd {A : Type} (f : A → nat) (n : nat) (S : finset A) : (∀ a, a ∈ S → n ∣f a) → n ∣ Sum S f := sorry
+
+variables {G S : Type} [ambientG : group G] [deceqG : decidable_eq G] [finS : fintype S] [deceqS : decidable_eq S]
+include ambientG
+
+definition psubg (H : finset G) (p m : nat) : Prop := is_prime p ∧ card H = p^(succ m)
+
+include deceqG finS deceqS
+variables {hom : G → perm S} [Hom : is_hom_class hom]
+variables {H : finset G} [subgH : is_finsubg H]
+include Hom subgH
+open finset.partition
+
+lemma card_mod_eq_of_action_by_psubg (p : nat) {m : nat} :
+  psubg H p m → (card S) mod p = (card (fixed_point_orbits hom H)) mod p :=
+take Ppsubg, begin
+  rewrite [@orbit_class_equation' G S ambientG finS deceqS hom Hom H subgH],
+  apply add_mod_eq_of_dvd, apply dvd_Sum_of_dvd,
+  intro s Psin,
+  rewrite mem_filter_iff at Psin,
+  cases Psin with Psinorbs Pcardne,
+  esimp [orbits, equiv_classes, orbit_partition] at Psinorbs,
+  rewrite mem_image_iff at Psinorbs,
+  cases Psinorbs with a Pa,
+  cases Pa with Pain Porb,
+  substvars,
+  cases Ppsubg with Pprime PcardH,
+  assert Pdvd : card (orbit hom H a) ∣ p ^ (succ m),
+    rewrite -PcardH,
+    apply dvd_of_eq_mul (finset.card (stab hom H a)),
+    apply orbit_stabilizer_theorem,
+  apply or.elim (divisor_of_prime_pow Pprime Pdvd),
+    intro Pcardeq, contradiction,
+    intro Ppdvd, exact Ppdvd
+end
+
+end pgroup
+
 section cauchy
 
 lemma Prodl_singleton {A B : Type} [mB : monoid B] {a : A} {f : A → B} : Prodl [a] f = f a :=
@@ -36,8 +85,7 @@ lemma prodl_rotl_eq_one_of_prodl_eq_one {A B : Type} [gB : group B] {f : A → B
 
 section rotl_peo
 
-variable {A : Type}
-variable [ambA : group A]
+variables {A : Type} [ambA : group A]
 include ambA
 
 theorem eq_inv_of_mul_eq_one {a b : A} (H : a * b = 1) : a = b⁻¹ :=
