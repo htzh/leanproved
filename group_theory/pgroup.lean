@@ -20,14 +20,14 @@ namespace group
 section pgroup
 
 definition is_prime : nat → Prop := sorry
-lemma prime_pos (p : nat) : is_prime p → p > 0 := sorry
+lemma pred_prime_pos {p : nat} : is_prime p → pred p > 0 := sorry
 lemma succ_pred_prime {p : nat} : is_prime p → succ (pred p) = p := sorry
-lemma divisor_of_prime (p i : nat) : is_prime p → i ∣ p → i = 1 ∨ i = p := sorry
+lemma divisor_of_prime {p i : nat} : is_prime p → i ∣ p → i = 1 ∨ i = p := sorry
 lemma divisor_of_prime_pow {p m i : nat} : is_prime p → i ∣ (p^m) → i = 1 ∨ p ∣ i := sorry
 lemma add_mod_eq_of_dvd (i j n : nat) : n ∣ j → (i + j) mod n = i mod n := sorry
 lemma dvd_of_eq_mul (i j n : nat) : n = j*i → j ∣ n := sorry
 lemma dvd_pow (i n : nat) : i ∣ i ^ n := sorry
-lemma dvd_pow_of_dvd (i j n : nat) : i ∣ j → i ∣ j^n := sorry
+lemma dvd_pow_of_dvd_of_pos {i j n : nat} : i ∣ j → n > 0 → i ∣ j^n := sorry
 lemma pow_mod_eq_zero (i n : nat) : (i^n) mod i = 0 := sorry
 lemma gt_one_of_pos_of_prime_dvd {i p : nat} (Pp : is_prime p) : 0 < i → i mod p = 0 → 1 < i := sorry
 
@@ -57,7 +57,7 @@ variables {H : finset G} [subgH : is_finsubg H]
 include Hom subgH
 open finset.partition
 
-lemma card_mod_eq_of_action_by_psubg (p : nat) {m : nat} :
+lemma card_mod_eq_of_action_by_psubg {p : nat} {m : nat} :
   psubg H p m → (card S) mod p = (card (fixed_points hom H)) mod p :=
 take Ppsubg, begin
   rewrite [@orbit_class_equation' G S ambientG finS deceqS hom Hom H subgH],
@@ -168,7 +168,7 @@ assume Pc, assert Pcl : ∀ i, i ∈ upto (succ n) → s i = s !zero,
   from take i, assume Pin, Pc i,
 by rewrite [↑prodseq, Prodl_eq_pow_of_const _ Pcl, fin.length_upto]
 
-lemma seq_eq_of_constseq_of_eq {n : nat} (s₁ s₂ : seq A (succ n)) :
+lemma seq_eq_of_constseq_of_eq {n : nat} {s₁ s₂ : seq A (succ n)} :
   constseq s₁ → constseq s₂ → s₁ !zero = s₂ !zero → s₁ = s₂ :=
 assume Pc₁ Pc₂ Peq, funext take i, by rewrite [Pc₁ i,  Pc₂ i, Peq]
 
@@ -336,6 +336,12 @@ assume Psin, take i, begin
   apply const_of_is_fixed_point, exact is_fixed_point_of_mem_fixed_points Psin
 end
 
+lemma pow_eq_one_of_mem_fixed_points {s : peo_seq A n} :
+  s ∈ fixed_points (rotl_perm_ps A n) univ → (elt_of s !zero)^(succ n) = 1 :=
+assume Psin, eq.trans
+  (eq.symm (prodseq_eq_pow_of_constseq (elt_of s) (const_of_rotl_fixed_point Psin)))
+  (has_property s)
+
 lemma peo_seq_one_is_fixed_point : is_fixed_point (rotl_perm_ps A n) univ (peo_seq_one A n) :=
 take h, assume Pin, by esimp [rotl_perm_ps]
 
@@ -344,12 +350,44 @@ mem_fixed_points_of_is_fixed_point_of_exists peo_seq_one_is_fixed_point (exists.
 
 lemma generator_of_prime_dvd_order {p : nat}
   : is_prime p → p ∣ card A → ∃ g : A, g ≠ 1 ∧ g^p = 1 :=
-assume Pprime,
-let finp := @univ (fin (succ (pred p))) _ in
-assert Ppsubg : psubg finp p 0,
-  from and.intro Pprime (by rewrite [succ_pred_prime Pprime, card_fin, pow_one]),
-_
+assume Pprime Pdvd,
+let pp := nat.pred p, spp := nat.succ pp in
+assert Peq : spp = p, from succ_pred_prime Pprime,
+have Ppsubg : psubg (@univ (fin spp) _) spp 0,
+  from and.intro (eq.symm Peq ▸ Pprime) (by rewrite [Peq, card_fin, pow_one]),
+have Pcardmod : (nat.pow (card A) pp) mod p = (card (fixed_points (rotl_perm_ps A pp) univ)) mod p,
+  from Peq ▸ card_peo_seq ▸ card_mod_eq_of_action_by_psubg Ppsubg,
+have Pfpcardmod : (card (fixed_points (rotl_perm_ps A pp) univ)) mod p = 0,
+  from eq.trans (eq.symm Pcardmod) (mod_eq_zero_of_dvd (dvd_pow_of_dvd_of_pos Pdvd (pred_prime_pos Pprime))),
+have Pfpcardpos : card (fixed_points (rotl_perm_ps A pp) univ) > 0,
+  from card_pos_of_mem peo_seq_one_mem_fixed_points,
+have Pfpcardgt1 : card (fixed_points (rotl_perm_ps A pp) univ) > 1,
+  from gt_one_of_pos_of_prime_dvd Pprime Pfpcardpos Pfpcardmod,
+obtain s₁ s₂ Pin₁ Pin₂ Psnes, from exists_two_of_card_gt_one Pfpcardgt1,
+decidable.by_cases
+  (λ Pe₁ : elt_of s₁ !zero = 1,
+    assert Pne₂ : elt_of s₂ !zero ≠ 1,
+    from assume Pe₂,
+      absurd
+        (subtype.eq (seq_eq_of_constseq_of_eq
+          (const_of_rotl_fixed_point Pin₁)
+          (const_of_rotl_fixed_point Pin₂)
+          (eq.trans Pe₁ (eq.symm Pe₂))))
+        Psnes,
+    exists.intro (elt_of s₂ !zero)
+      (and.intro Pne₂ (Peq ▸ pow_eq_one_of_mem_fixed_points Pin₂)))
+  (λ Pne, exists.intro (elt_of s₁ !zero)
+    (and.intro Pne (Peq ▸ pow_eq_one_of_mem_fixed_points Pin₁)))
+
 end
+
+theorem cauchy_theorem {p : nat} : is_prime p → p ∣ card A → ∃ g : A, order g = p :=
+assume Pprime Pdvd,
+obtain g Pne Pgpow, from generator_of_prime_dvd_order Pprime Pdvd,
+assert Porder : order g ∣ p, from order_dvd_of_pow_eq_one Pgpow,
+or.elim (divisor_of_prime Pprime Porder)
+  (λ Pe, absurd (eq_one_of_order_eq_one Pe) Pne)
+  (λ Porderp, exists.intro g Porderp)
 
 end rotl_peo
 

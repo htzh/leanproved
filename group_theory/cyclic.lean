@@ -246,6 +246,12 @@ obtain i Pin Pone, from exists_of_mem_image (eq.symm (cyc_eq_cyc a 1) ▸ cyc_ha
 or.elim (eq_or_lt_of_le (succ_le_of_lt (is_lt i)))
   (assume P, P ▸ Pone) (assume P, absurd Pone (pow_ne_of_lt_order P))
 
+lemma eq_one_of_order_eq_one {a : A} : order a = 1 → a = 1 :=
+assume Porder,
+calc a = a^1 : eq.symm (pow_one a)
+   ... = a^(order a) : Porder
+   ... = 1 : pow_order
+
 lemma order_of_min_pow {a : A} {n : nat}
   (Pone : a^(succ n) = 1) (Pmin : ∀ i, i < n → a^(succ i) ≠ 1) : order a = succ n :=
 or.elim (eq_or_lt_of_le (order_le Pone)) (λ P, P)
@@ -255,6 +261,15 @@ or.elim (eq_or_lt_of_le (order_le Pone)) (λ P, P)
     apply Pmin, apply nat.lt_of_succ_lt_succ,
     rewrite [succ_pred_of_pos !order_pos], assumption,
   exact absurd (pow_order a) Pn end)
+
+lemma order_dvd_of_pow_eq_one {a : A} {n : nat} (Pone : a^n = 1) : order a ∣ n :=
+assert Pe : a^(n mod order a) = 1, from
+  begin
+    revert Pone,
+    rewrite [eq_div_mul_add_mod n (order a) at {1}, pow_add, mul.comm _ (order a), pow_mul, pow_order, one_pow, one_mul],
+    intros, assumption
+  end,
+dvd_of_mod_eq_zero (eq_zero_of_pow_eq_one Pe (mod_lt n !order_pos))
 
 definition cyc_is_finsubg [instance] (a : A) : is_finsubg (cyc a) :=
 is_finsubg.mk (cyc_has_one a) (cyc_mul_closed a) (cyc_has_inv a)
