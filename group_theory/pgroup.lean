@@ -75,6 +75,14 @@ lemma Prodl_map {A B : Type} [mB : monoid B] {f : A → B} :
 | nil    := by rewrite [map_nil]
 | (a::l) := begin rewrite [map_cons, Prodl_cons f, Prodl_cons id (f a), Prodl_map] end
 
+lemma Prodl_eq_pow_of_const {A B : Type} [mB : monoid B] {f : A → B} :
+  ∀ {l : list A} b, (∀ a, a ∈ l → f a = b) → Prodl l f = b ^ length l
+| nil    := take b, assume Pconst, by rewrite [length_nil, {b^0}algebra.pow_zero]
+| (a::l) := take b, assume Pconst,
+  assert Pconstl : ∀ a', a' ∈ l → f a' = b,
+    from take a' Pa'in, Pconst a' (mem_cons_of_mem a Pa'in),
+  by rewrite [Prodl_cons f, Pconst a !mem_cons, Prodl_eq_pow_of_const b Pconstl, length_cons, add_one, pow_succ' b]
+
 lemma prodl_rotl_eq_one_of_prodl_eq_one {A B : Type} [gB : group B] {f : A → B} :
   ∀ {l : list A}, Prodl l f = 1 → Prodl (list.rotl l) f = 1
 | nil := assume Peq, rfl
@@ -132,6 +140,8 @@ definition prodseq {n : nat} (s : seq A n) : A := Prodl (upto n) s
 
 definition peo [reducible] {n : nat} (s : seq A n) := prodseq s = 1
 
+definition constseq {n : nat} (s : seq A (succ n)) := ∀ i, s i = s !zero
+
 variable [deceqA : decidable_eq A]
 include deceqA
 
@@ -149,6 +159,16 @@ variable {A}
 
 lemma prodseq_eq {n :nat} {s : seq A n} : prodseq s = Prodl (fun_to_list s) id :=
 Prodl_map
+
+lemma prodseq_eq_pow_of_constseq {n : nat} (s : seq A (succ n)) :
+  constseq s → prodseq s = (s !zero) ^ succ n :=
+assume Pc, assert Pcl : ∀ i, i ∈ upto (succ n) → s i = s !zero,
+  from take i, assume Pin, Pc i,
+by rewrite [↑prodseq, Prodl_eq_pow_of_const _ Pcl, fin.length_upto]
+
+lemma seq_eq_of_constseq_of_eq {n : nat} (s₁ s₂ : seq A (succ n)) :
+  constseq s₁ → constseq s₂ → s₁ !zero = s₂ !zero → s₁ = s₂ :=
+assume Pc₁ Pc₂ Peq, funext take i, by rewrite [Pc₁ i,  Pc₂ i, Peq]
 
 lemma prodseq_eq_one_of_mem_all_prodseq_eq_one {n : nat} {s : seq A (succ n)} :
   s ∈ all_prodseq_eq_one A n → prodseq s = 1 :=
@@ -251,10 +271,27 @@ lemma rotl_perm_ps_hom (i j : fin (succ n)) :
   rotl_perm_ps A n (i+j) = (rotl_perm_ps A n i) * (rotl_perm_ps A n j) :=
 eq_of_feq (begin rewrite [↑rotl_perm_ps, {val (i+j)}val_madd, add.comm, -rotl_peo_seq_mod, -rotl_peo_seq_compose] end)
 
+section
 local attribute group_of_add_group [instance]
 
 definition rotl_perm_ps_is_hom [instance] : is_hom_class (rotl_perm_ps A n) :=
 is_hom_class.mk rotl_perm_ps_hom
+
+open finset
+
+lemma const_of_is_fixed_point {s : peo_seq A n} :
+  is_fixed_point (rotl_perm_ps A n) univ s → constseq (elt_of s) :=
+assume Pfp, take i, begin
+  rewrite [-(Pfp i !mem_univ) at {1}, rotl_perm_ps_eq, ↑rotl_perm, ↑rotl_fun, {i}mk_mod_eq at {2}, rotl_to_zero]
+end
+
+lemma const_of_rotl_fixed_point {s : peo_seq A n} :
+  s ∈ fixed_points (rotl_perm_ps A n) univ → constseq (elt_of s) :=
+assume Psin, take i, begin
+  apply const_of_is_fixed_point, exact is_fixed_point_of_mem_fixed_points Psin
+end
+
+end
 
 end rotl_peo
 

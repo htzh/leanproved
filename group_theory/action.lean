@@ -18,7 +18,7 @@ include ambientG finS deceqS
 definition orbit (hom : G → perm S) (H : finset G) (a : S) : finset S :=
            image (move_by a) (image hom H)
 
-definition fixed_points (hom : G → perm S) (H : finset G) : finset S :=
+definition fixed_points [reducible] (hom : G → perm S) (H : finset G) : finset S :=
 {a ∈ univ | orbit hom H a = singleton a}
 
 definition is_fixed_point (hom : G → perm S) (H : finset G) (a : S) : Prop :=

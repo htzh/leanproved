@@ -20,6 +20,9 @@ local attribute madd [reducible]
 definition mk_mod [reducible] (n i : nat) : fin (succ n) :=
 mk (i mod (succ n)) (mod_lt _ !zero_lt_succ)
 
+lemma mk_mod_eq {n : nat} {i : fin (succ n)} : i = mk_mod n i :=
+eq_of_veq begin rewrite [↑mk_mod, mod_eq_of_lt !is_lt] end
+
 lemma mk_mod_of_lt {n i : nat} (Plt : i < succ n) : mk_mod n i = mk i Plt :=
 begin esimp [mk_mod], congruence, exact mod_eq_of_lt Plt end
 
