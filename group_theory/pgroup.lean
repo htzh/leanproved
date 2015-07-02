@@ -20,14 +20,31 @@ namespace group
 section pgroup
 
 definition is_prime : nat → Prop := sorry
+lemma prime_pos (p : nat) : is_prime p → p > 0 := sorry
+lemma succ_pred_prime {p : nat} : is_prime p → succ (pred p) = p := sorry
 lemma divisor_of_prime (p i : nat) : is_prime p → i ∣ p → i = 1 ∨ i = p := sorry
 lemma divisor_of_prime_pow {p m i : nat} : is_prime p → i ∣ (p^m) → i = 1 ∨ p ∣ i := sorry
 lemma add_mod_eq_of_dvd (i j n : nat) : n ∣ j → (i + j) mod n = i mod n := sorry
 lemma dvd_of_eq_mul (i j n : nat) : n = j*i → j ∣ n := sorry
+lemma dvd_pow (i n : nat) : i ∣ i ^ n := sorry
+lemma dvd_pow_of_dvd (i j n : nat) : i ∣ j → i ∣ j^n := sorry
+lemma pow_mod_eq_zero (i n : nat) : (i^n) mod i = 0 := sorry
+lemma gt_one_of_pos_of_prime_dvd {i p : nat} (Pp : is_prime p) : 0 < i → i mod p = 0 → 1 < i := sorry
 
 open finset fintype
 
 lemma dvd_Sum_of_dvd {A : Type} (f : A → nat) (n : nat) (S : finset A) : (∀ a, a ∈ S → n ∣f a) → n ∣ Sum S f := sorry
+
+lemma singleton_subset_of_mem {A : Type} {a : A} {S : finset A} : a ∈ S → singleton a ⊆ S :=
+assume Pain, subset_of_forall take x,
+  by rewrite [mem_singleton_eq]; intro P; rewrite P; assumption
+
+lemma card_pos_of_mem {A : Type} [deceqA : decidable_eq A] {a : A} {S : finset A} :
+  a ∈ S → card S > 0 :=
+assume Pain, lt_of_succ_le (card_le_card_of_subset (singleton_subset_of_mem Pain))
+
+lemma exists_two_of_card_gt_one {A : Type} [deceqA : decidable_eq A] {S : finset A} :
+  1 < card S → ∃ a b, a ∈ S ∧ b ∈ S ∧ a ≠ b := sorry
 
 variables {G S : Type} [ambientG : group G] [deceqG : decidable_eq G] [finS : fintype S] [deceqS : decidable_eq S]
 include ambientG
@@ -142,21 +159,6 @@ definition peo [reducible] {n : nat} (s : seq A n) := prodseq s = 1
 
 definition constseq {n : nat} (s : seq A (succ n)) := ∀ i, s i = s !zero
 
-variable [deceqA : decidable_eq A]
-include deceqA
-
-variable (A)
-
-definition peo_seq [reducible] (n : nat) := {s : seq A (succ n) | peo s}
-
-definition all_prodseq_eq_one (n : nat) : list (seq A (succ n)) :=
-dmap (λ l, length l = card (fin (succ n))) list_to_fun (all_prodl_eq_one A n)
-
-definition all_peo_seqs (n : nat) : list (peo_seq A n) :=
-dmap peo tag (all_prodseq_eq_one A n)
-
-variable {A}
-
 lemma prodseq_eq {n :nat} {s : seq A n} : prodseq s = Prodl (fun_to_list s) id :=
 Prodl_map
 
@@ -169,6 +171,32 @@ by rewrite [↑prodseq, Prodl_eq_pow_of_const _ Pcl, fin.length_upto]
 lemma seq_eq_of_constseq_of_eq {n : nat} (s₁ s₂ : seq A (succ n)) :
   constseq s₁ → constseq s₂ → s₁ !zero = s₂ !zero → s₁ = s₂ :=
 assume Pc₁ Pc₂ Peq, funext take i, by rewrite [Pc₁ i,  Pc₂ i, Peq]
+
+lemma peo_const_one : ∀ {n : nat}, peo (λ i : fin n, (1 : A))
+| 0 := rfl
+| (succ n) := let s := λ i : fin (succ n), (1 : A) in
+  assert Pconst : constseq s, from take i, rfl,
+  calc prodseq s = (s !zero) ^ succ n : prodseq_eq_pow_of_constseq s Pconst
+             ... = (1 : A) ^ succ n : rfl
+             ... = 1 : algebra.one_pow
+
+variable [deceqA : decidable_eq A]
+include deceqA
+
+variable (A)
+
+definition peo_seq [reducible] (n : nat) := {s : seq A (succ n) | peo s}
+
+definition peo_seq_one (n : nat) : peo_seq A n :=
+tag (λ i : fin (succ n), (1 : A)) peo_const_one
+
+definition all_prodseq_eq_one (n : nat) : list (seq A (succ n)) :=
+dmap (λ l, length l = card (fin (succ n))) list_to_fun (all_prodl_eq_one A n)
+
+definition all_peo_seqs (n : nat) : list (peo_seq A n) :=
+dmap peo tag (all_prodseq_eq_one A n)
+
+variable {A}
 
 lemma prodseq_eq_one_of_mem_all_prodseq_eq_one {n : nat} {s : seq A (succ n)} :
   s ∈ all_prodseq_eq_one A n → prodseq s = 1 :=
@@ -219,8 +247,25 @@ take ps, subtype.destruct ps (take s, assume Ps,
   assert Pin : s ∈ all_prodseq_eq_one A n, from all_prodseq_eq_one_complete Ps,
   mem_dmap Ps Pin)
 
+lemma length_all_peo_seqs {n : nat} : length (all_peo_seqs A n) = (card A)^n :=
+eq.trans (eq.trans
+  (show length (all_peo_seqs A n) = length (all_prodseq_eq_one A n), from
+    assert Pmap : map elt_of (all_peo_seqs A n) = all_prodseq_eq_one A n,
+      from map_dmap_of_inv_of_pos (λ s P, rfl)
+        (λ s, prodseq_eq_one_of_mem_all_prodseq_eq_one),
+    by rewrite [-Pmap, length_map])
+  (show length (all_prodseq_eq_one A n) = length (all_prodl_eq_one A n), from
+    assert Pmap : map fun_to_list (all_prodseq_eq_one A n) = all_prodl_eq_one A n,
+      from map_dmap_of_inv_of_pos list_to_fun_to_list
+        (λ l Pin, by rewrite [length_of_mem_all_prodl_eq_one Pin, card_fin]),
+    by rewrite [-Pmap, length_map]))
+  length_all_prodl_eq_one
+
 definition peo_seq_is_fintype [instance] {n : nat} : fintype (peo_seq A n) :=
 fintype.mk (all_peo_seqs A n) nodup_all_peo_seqs all_peo_seqs_complete
+
+lemma card_peo_seq {n : nat} : card (peo_seq A n) = (card A)^n :=
+length_all_peo_seqs
 
 section
 
@@ -291,6 +336,19 @@ assume Psin, take i, begin
   apply const_of_is_fixed_point, exact is_fixed_point_of_mem_fixed_points Psin
 end
 
+lemma peo_seq_one_is_fixed_point : is_fixed_point (rotl_perm_ps A n) univ (peo_seq_one A n) :=
+take h, assume Pin, by esimp [rotl_perm_ps]
+
+lemma peo_seq_one_mem_fixed_points : peo_seq_one A n ∈ fixed_points (rotl_perm_ps A n) univ :=
+mem_fixed_points_of_is_fixed_point_of_exists peo_seq_one_is_fixed_point (exists.intro !zero !mem_univ)
+
+lemma generator_of_prime_dvd_order {p : nat}
+  : is_prime p → p ∣ card A → ∃ g : A, g ≠ 1 ∧ g^p = 1 :=
+assume Pprime,
+let finp := @univ (fin (succ (pred p))) _ in
+assert Ppsubg : psubg finp p 0,
+  from and.intro Pprime (by rewrite [succ_pred_prime Pprime, card_fin, pow_one]),
+_
 end
 
 end rotl_peo

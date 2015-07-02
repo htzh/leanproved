@@ -63,10 +63,24 @@ lemma orbit_of_exists {b : S} : (∃ h, h ∈ H ∧ hom h a = b) → b ∈ orbit
 assume Pex, obtain h PinH Phab, from Pex,
 mem_image_of_mem_of_eq (mem_image_of_mem hom PinH) Phab
 
-lemma is_fixed_point_of_mem_fixed_points : a ∈ fixed_points hom H → is_fixed_point hom H a :=
+lemma is_fixed_point_of_mem_fixed_points :
+  a ∈ fixed_points hom H → is_fixed_point hom H a :=
 assume Pain, take h, assume Phin,
   eq_of_mem_singleton
     (of_mem_filter Pain ▸ orbit_of_exists (exists.intro h (and.intro Phin rfl)))
+
+lemma mem_fixed_points_of_is_fixed_point_of_exists :
+  is_fixed_point hom H a → (∃ h, h ∈ H) → a ∈ fixed_points hom H :=
+assume Pfp Pex, mem_filter_of_mem !mem_univ
+  (ext take x, iff.intro
+    (assume Porb, obtain h Phin Pha, from exists_of_orbit Porb,
+      by rewrite [mem_singleton_eq, -Pha, Pfp h Phin])
+    (obtain h Phin, from Pex,
+      by rewrite mem_singleton_eq;
+         intro Peq; rewrite Peq;
+         apply orbit_of_exists;
+         existsi h; apply and.intro Phin (Pfp h Phin)))
+
 end
 
 variable [deceqG : decidable_eq G]
