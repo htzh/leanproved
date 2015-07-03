@@ -19,17 +19,7 @@ namespace group
 
 section pgroup
 
-definition is_prime : nat → Prop := sorry
-lemma pred_prime_pos {p : nat} : is_prime p → pred p > 0 := sorry
-lemma succ_pred_prime {p : nat} : is_prime p → succ (pred p) = p := sorry
-lemma divisor_of_prime {p i : nat} : is_prime p → i ∣ p → i = 1 ∨ i = p := sorry
-lemma divisor_of_prime_pow {p m i : nat} : is_prime p → i ∣ (p^m) → i = 1 ∨ p ∣ i := sorry
-lemma add_mod_eq_of_dvd (i j n : nat) : n ∣ j → (i + j) mod n = i mod n := sorry
-lemma dvd_of_eq_mul (i j n : nat) : n = j*i → j ∣ n := sorry
-lemma dvd_pow (i n : nat) : i ∣ i ^ n := sorry
-lemma dvd_pow_of_dvd_of_pos {i j n : nat} : i ∣ j → n > 0 → i ∣ j^n := sorry
-lemma pow_mod_eq_zero (i n : nat) : (i^n) mod i = 0 := sorry
-lemma gt_one_of_pos_of_prime_dvd {i p : nat} (Pp : is_prime p) : 0 < i → i mod p = 0 → 1 < i := sorry
+lemma divisor_of_prime_pow {p m i : nat} : prime p → i ∣ (p^m) → i = 1 ∨ p ∣ i := sorry
 
 open finset fintype
 
@@ -49,7 +39,7 @@ lemma exists_two_of_card_gt_one {A : Type} [deceqA : decidable_eq A] {S : finset
 variables {G S : Type} [ambientG : group G] [deceqG : decidable_eq G] [finS : fintype S] [deceqS : decidable_eq S]
 include ambientG
 
-definition psubg (H : finset G) (p m : nat) : Prop := is_prime p ∧ card H = p^(succ m)
+definition psubg (H : finset G) (p m : nat) : Prop := prime p ∧ card H = p^(succ m)
 
 include deceqG finS deceqS
 variables {hom : G → perm S} [Hom : is_hom_class hom]
@@ -349,7 +339,7 @@ lemma peo_seq_one_mem_fixed_points : peo_seq_one A n ∈ fixed_points (rotl_perm
 mem_fixed_points_of_is_fixed_point_of_exists peo_seq_one_is_fixed_point (exists.intro !zero !mem_univ)
 
 lemma generator_of_prime_dvd_order {p : nat}
-  : is_prime p → p ∣ card A → ∃ g : A, g ≠ 1 ∧ g^p = 1 :=
+  : prime p → p ∣ card A → ∃ g : A, g ≠ 1 ∧ g^p = 1 :=
 assume Pprime Pdvd,
 let pp := nat.pred p, spp := nat.succ pp in
 assert Peq : spp = p, from succ_pred_prime Pprime,
@@ -381,13 +371,15 @@ decidable.by_cases
 
 end
 
-theorem cauchy_theorem {p : nat} : is_prime p → p ∣ card A → ∃ g : A, order g = p :=
+theorem cauchy_theorem {p : nat} : prime p → p ∣ card A → ∃ g : A, order g = p :=
 assume Pprime Pdvd,
 obtain g Pne Pgpow, from generator_of_prime_dvd_order Pprime Pdvd,
 assert Porder : order g ∣ p, from order_dvd_of_pow_eq_one Pgpow,
 or.elim (divisor_of_prime Pprime Porder)
   (λ Pe, absurd (eq_one_of_order_eq_one Pe) Pne)
   (λ Porderp, exists.intro g Porderp)
+
+check @cauchy_theorem
 
 end rotl_peo
 
