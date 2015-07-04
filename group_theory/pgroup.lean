@@ -19,11 +19,22 @@ namespace group
 
 section pgroup
 
-lemma divisor_of_prime_pow {p m i : nat} : prime p → i ∣ (p^m) → i = 1 ∨ p ∣ i := sorry
+lemma coprime_or_dvd_of_prime {p} (Pp : prime p) (i : nat) : coprime p i ∨ p ∣ i :=
+or.elim (divisor_of_prime Pp (gcd_dvd_left p i))
+  (assume Pcp, or.inl Pcp) (assume Pdvd, or.inr (Pdvd ▸ gcd_dvd_right p i))
+
+lemma divisor_of_prime_pow {p : nat} : ∀ {m i : nat}, prime p → i ∣ (p^m) → i = 1 ∨ p ∣ i
+| 0        := take i, assume Pp, begin rewrite [pow_zero], intro Pdvd, apply or.inl (eq_one_of_dvd_one Pdvd) end
+| (succ m) := take i, assume Pp, or.elim (coprime_or_dvd_of_prime Pp i)
+  (λ Pcp, begin
+    rewrite [pow_succ], intro Pdvd,
+    apply divisor_of_prime_pow Pp,
+    apply dvd_of_coprime_of_dvd_mul_right,
+      apply coprime_swap Pcp, exact Pdvd
+  end)
+  (λ Pdvd, assume P, or.inr Pdvd)
 
 open finset fintype
-
-lemma dvd_add {m n₁ n₂ : ℕ} : m ∣ n₁ → m ∣ n₂ → m ∣ n₁ + n₂ := sorry
 
 lemma dvd_Sum_of_dvd {A : Type} [deceqA : decidable_eq A] (f : A → nat) (n : nat) (S : finset A) : (∀ a, a ∈ S → n ∣ f a) → n ∣ Sum S f :=
 finset.induction_on S (assume P, !dvd_zero)
