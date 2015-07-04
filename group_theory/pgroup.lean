@@ -5,7 +5,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author : Haitao Zhang
 -/
 
-import data algebra.group algebra.group_power algebra.group_bigops .cyclic  .finsubg .hom .finfun .perm .action
+import theories.number_theory.primes data algebra.group algebra.group_power algebra.group_bigops .cyclic  .finsubg .hom .finfun .perm .action
 
 open nat fin list algebra function subtype
 
@@ -19,31 +19,7 @@ namespace group
 
 section pgroup
 
-lemma coprime_or_dvd_of_prime {p} (Pp : prime p) (i : nat) : coprime p i ∨ p ∣ i :=
-or.elim (divisor_of_prime Pp (gcd_dvd_left p i))
-  (assume Pcp, or.inl Pcp) (assume Pdvd, or.inr (Pdvd ▸ gcd_dvd_right p i))
-
-lemma divisor_of_prime_pow {p : nat} : ∀ {m i : nat}, prime p → i ∣ (p^m) → i = 1 ∨ p ∣ i
-| 0        := take i, assume Pp, begin rewrite [pow_zero], intro Pdvd, apply or.inl (eq_one_of_dvd_one Pdvd) end
-| (succ m) := take i, assume Pp, or.elim (coprime_or_dvd_of_prime Pp i)
-  (λ Pcp, begin
-    rewrite [pow_succ], intro Pdvd,
-    apply divisor_of_prime_pow Pp,
-    apply dvd_of_coprime_of_dvd_mul_right,
-      apply coprime_swap Pcp, exact Pdvd
-  end)
-  (λ Pdvd, assume P, or.inr Pdvd)
-
 open finset fintype
-
-lemma dvd_Sum_of_dvd {A : Type} [deceqA : decidable_eq A] (f : A → nat) (n : nat) (S : finset A) : (∀ a, a ∈ S → n ∣ f a) → n ∣ Sum S f :=
-finset.induction_on S (assume P, !dvd_zero)
-  (take a S', assume Panin IH Pdvd, begin
-    rewrite [nat.Sum_insert_of_not_mem f Panin],
-    apply dvd_add,
-      apply Pdvd, rewrite [mem_insert_eq, eq_self_iff_true, true_or], exact trivial,
-      apply IH, intro a' Pin, apply Pdvd, exact mem_insert_of_mem _ Pin
-    end)
 
 lemma singleton_subset_of_mem {A : Type} {a : A} {S : finset A} : a ∈ S → singleton a ⊆ S :=
 assume Pain, subset_of_forall take x,
@@ -52,9 +28,6 @@ assume Pain, subset_of_forall take x,
 lemma card_pos_of_mem {A : Type} [deceqA : decidable_eq A] {a : A} {S : finset A} :
   a ∈ S → card S > 0 :=
 assume Pain, lt_of_succ_le (card_le_card_of_subset (singleton_subset_of_mem Pain))
-
-lemma exists_two_of_card_gt_one {A : Type} [deceqA : decidable_eq A] {S : finset A} :
-  1 < card S → ∃ a b, a ∈ S ∧ b ∈ S ∧ a ≠ b := sorry
 
 variables {G S : Type} [ambientG : group G] [deceqG : decidable_eq G] [finS : fintype S] [deceqS : decidable_eq S]
 include ambientG
