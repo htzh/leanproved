@@ -11,6 +11,9 @@ open finset algebra function
 
 local attribute perm.f [coercion]
 
+lemma and_left_true {a b : Prop} (Pa : a) : a ∧ b ↔ b :=
+by rewrite [iff_true_intro Pa, true_and]
+
 section def
 variables {G S : Type} [ambientG : group G] [finS : fintype S] [deceqS : decidable_eq S]
 include ambientG finS deceqS
@@ -345,20 +348,31 @@ definition fixed_point_orbits : finset (finset S) :=
 
 variables {hom} {H}
 
-lemma exists_of_mem_orbits (orb : finset S) :
-  orb ∈ orbits hom H → ∃ a : S, orbit hom H a = orb :=
+lemma exists_iff_mem_orbits (orb : finset S) :
+  orb ∈ orbits hom H ↔ ∃ a : S, orbit hom H a = orb :=
 begin
   esimp [orbits, equiv_classes, orbit_partition],
   rewrite [mem_image_iff],
-  intro Pex, cases Pex with a Pa,
-  existsi a, exact and.right Pa
+  apply iff.intro,
+    intro Pl,
+    cases Pl with a Pa,
+    rewrite (and_left_true !mem_univ) at Pa,
+    existsi a, exact Pa,
+    intro Pr,
+    cases Pr with a Pa,
+    rewrite -true_and at Pa, rewrite -(iff_true_intro (mem_univ a)) at Pa,
+    existsi a, exact Pa
 end
+
+lemma exists_of_mem_orbits {orb : finset S} :
+  orb ∈ orbits hom H → ∃ a : S, orbit hom H a = orb :=
+iff.elim_left (exists_iff_mem_orbits orb)
 
 lemma fixed_point_orbits_eq : fixed_point_orbits hom H = image (orbit hom H) (fixed_points hom H) :=
 ext take s, iff.intro
   (assume Pin,
    obtain Psin Ps, from iff.elim_left !mem_filter_iff Pin,
-   obtain a Pa, from exists_of_mem_orbits s Psin,
+   obtain a Pa, from exists_of_mem_orbits Psin,
    mem_image_of_mem_of_eq
      (mem_filter_of_mem !mem_univ (eq.symm
        (eq_of_card_eq_of_subset (by rewrite [card_singleton, Pa, Ps])

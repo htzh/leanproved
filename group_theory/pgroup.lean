@@ -23,7 +23,16 @@ lemma divisor_of_prime_pow {p m i : nat} : prime p → i ∣ (p^m) → i = 1 ∨
 
 open finset fintype
 
-lemma dvd_Sum_of_dvd {A : Type} (f : A → nat) (n : nat) (S : finset A) : (∀ a, a ∈ S → n ∣f a) → n ∣ Sum S f := sorry
+lemma dvd_add {m n₁ n₂ : ℕ} : m ∣ n₁ → m ∣ n₂ → m ∣ n₁ + n₂ := sorry
+
+lemma dvd_Sum_of_dvd {A : Type} [deceqA : decidable_eq A] (f : A → nat) (n : nat) (S : finset A) : (∀ a, a ∈ S → n ∣ f a) → n ∣ Sum S f :=
+finset.induction_on S (assume P, !dvd_zero)
+  (take a S', assume Panin IH Pdvd, begin
+    rewrite [nat.Sum_insert_of_not_mem f Panin],
+    apply dvd_add,
+      apply Pdvd, rewrite [mem_insert_eq, eq_self_iff_true, true_or], exact trivial,
+      apply IH, intro a' Pin, apply Pdvd, exact mem_insert_of_mem _ Pin
+    end)
 
 lemma singleton_subset_of_mem {A : Type} {a : A} {S : finset A} : a ∈ S → singleton a ⊆ S :=
 assume Pain, subset_of_forall take x,
