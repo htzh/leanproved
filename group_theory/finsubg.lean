@@ -71,6 +71,10 @@ variable {H : finset A}
 lemma fin_lcoset_eq (a : A) : ts (fin_lcoset H a) = a ∘> (ts H) := calc
       ts (fin_lcoset H a) = coset.l a (ts H) : to_set_image
       ... = a ∘> (ts H) : glcoset_eq_lcoset
+
+lemma fin_lcoset_compose (a b : A) : fin_lcoset (fin_lcoset H b) a = fin_lcoset H (a*b) :=
+to_set.inj (by rewrite [*fin_lcoset_eq, glcoset_compose])
+
 lemma fin_lcoset_card (a : A) : card (fin_lcoset H a) = card H :=
       card_image_eq_of_inj_on (lmul_inj_on a (ts H))
 lemma fin_lcosets_card_eq {G : finset A} : ∀ gH, gH ∈ fin_lcosets H G → card gH = card H :=
@@ -141,6 +145,11 @@ dmap (is_fin_lcoset H) tag (list_lcosets H)
 
 variable {H}
 
+definition lcoset_lmul (g : G) (S : lcoset_type H) : lcoset_type H :=
+tag (fin_lcoset (elt_of S) g)
+  (obtain f Pf, from has_property S,
+  exists.intro (g*f) (by rewrite [-Pf, -fin_lcoset_compose]))
+
 lemma is_lcoset_of_mem_list_lcosets {S : finset G}
   : S ∈ list_lcosets H → is_fin_lcoset H S :=
 assume Pin, obtain g Pg, from exists_of_mem_map (mem_of_mem_erase_dup Pin),
@@ -166,6 +175,22 @@ eq.trans
       map_dmap_of_inv_of_pos (λ S P, rfl) (λ S, is_lcoset_of_mem_list_lcosets),
     by rewrite[-Pmap, length_map])
   (by rewrite fin_lcosets_eq)
+
+lemma lcoset_lmul_compose (f g : G) (S : lcoset_type H) :
+lcoset_lmul f (lcoset_lmul g S) = lcoset_lmul (f*g) S :=
+subtype.eq !fin_lcoset_compose
+
+lemma lcoset_lmul_one (S : lcoset_type H) : lcoset_lmul 1 S = S :=
+subtype.eq (to_set.inj (by rewrite [↑lcoset_lmul, fin_lcoset_eq, glcoset_id]))
+
+lemma lcoset_lmul_inv {g : G} (S : lcoset_type H) :
+  lcoset_lmul g⁻¹ (lcoset_lmul g S) = S :=
+calc lcoset_lmul g⁻¹ _ = lcoset_lmul (g⁻¹*g) S : lcoset_lmul_compose
+                      ... = lcoset_lmul 1 S : mul.left_inv
+                      ... = S : lcoset_lmul_one
+
+lemma lcoset_lmul_inj {g : G} : @injective (lcoset_type H) _ (lcoset_lmul g) :=
+injective_of_has_left_inverse (exists.intro (lcoset_lmul g⁻¹) lcoset_lmul_inv)
 
 definition lcoset_fintype [instance] : fintype (lcoset_type H) :=
 fintype.mk (all_lcosets H)

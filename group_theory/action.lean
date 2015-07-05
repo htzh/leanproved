@@ -445,6 +445,31 @@ is_iso_class.mk action_by_lmul_hom action_by_lmul_inj
 
 end cayley
 
+section lcosets
+open fintype subtype
+
+variables {G : Type} [ambientG : group G] [finG : fintype G] [deceqG : decidable_eq G]
+include ambientG deceqG finG
+
+variables H : finset G
+
+definition action_on_lcoset : G → perm (lcoset_type H) :=
+take g, perm.mk (lcoset_lmul g) lcoset_lmul_inj
+
+variable {H}
+print classes
+print instances fintype
+print instances group
+print instances decidable
+lemma action_on_lcoset_hom : homomorphic (action_on_lcoset H) :=
+take g₁ g₂, _
+
+variable [finsubgH : is_finsubg H]
+include finsubgH
+
+
+end lcosets
+
 section perm_fin
 open fin nat eq.ops
 
