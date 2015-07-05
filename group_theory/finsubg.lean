@@ -159,8 +159,29 @@ ext (take S, iff.intro
   (λ Pl, obtain g Pg, from is_lcoset_of_mem_list_lcosets Pl,
     mem_image_of_mem_of_eq !mem_univ Pg))
 
-variable (H)
+lemma length_all_lcosets : length (all_lcosets H) = card (fin_lcosets H univ) :=
+eq.trans
+  (show length (all_lcosets H) = length (list_lcosets H), from
+    assert Pmap : map elt_of (all_lcosets H) = list_lcosets H, from
+      map_dmap_of_inv_of_pos (λ S P, rfl) (λ S, is_lcoset_of_mem_list_lcosets),
+    by rewrite[-Pmap, length_map])
+  (by rewrite fin_lcosets_eq)
 
+definition lcoset_fintype [instance] : fintype (lcoset_type H) :=
+fintype.mk (all_lcosets H)
+  (dmap_nodup_of_dinj (dinj_tag (is_fin_lcoset H)) !nodup_erase_dup)
+  (take s, subtype.destruct s (take S, assume PS, mem_dmap PS (mem_list_lcosets_of_is_lcoset PS)))
+
+lemma card_lcoset_type : card (lcoset_type H) = card (fin_lcosets H univ) :=
+length_all_lcosets
+
+open nat
+variable [finsubgH : is_finsubg H]
+include finsubgH
+
+theorem lagrange_theorem' : card G = card (lcoset_type H) * card H :=
+calc card G = card (fin_lcosets H univ) * card H : lagrange_theorem !subset_univ
+        ... = card (lcoset_type H) * card H : card_lcoset_type
 
 end lcoset_fintype
 
