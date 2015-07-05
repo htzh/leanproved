@@ -9,12 +9,6 @@ import theories.number_theory.primes data algebra.group algebra.group_power alge
 
 open nat fin list algebra function subtype
 
-section
-lemma dinj_tag {A : Type} (P : A → Prop) : dinj P tag :=
-take a₁ a₂ Pa₁ Pa₂ Pteq, subtype.no_confusion Pteq (λ Pe Pqe, Pe)
-
-end
-
 namespace group
 
 section pgroup
@@ -331,7 +325,7 @@ take h, assume Pin, by esimp [rotl_perm_ps]
 lemma peo_seq_one_mem_fixed_points : peo_seq_one A n ∈ fixed_points (rotl_perm_ps A n) univ :=
 mem_fixed_points_of_is_fixed_point_of_exists peo_seq_one_is_fixed_point (exists.intro !zero !mem_univ)
 
-lemma generator_of_prime_dvd_order {p : nat}
+lemma generator_of_prime_of_dvd_order {p : nat}
   : prime p → p ∣ card A → ∃ g : A, g ≠ 1 ∧ g^p = 1 :=
 assume Pprime Pdvd,
 let pp := nat.pred p, spp := nat.succ pp in
@@ -366,7 +360,7 @@ end
 
 theorem cauchy_theorem {p : nat} : prime p → p ∣ card A → ∃ g : A, order g = p :=
 assume Pprime Pdvd,
-obtain g Pne Pgpow, from generator_of_prime_dvd_order Pprime Pdvd,
+obtain g Pne Pgpow, from generator_of_prime_of_dvd_order Pprime Pdvd,
 assert Porder : order g ∣ p, from order_dvd_of_pow_eq_one Pgpow,
 or.elim (divisor_of_prime Pprime Porder)
   (λ Pe, absurd (eq_one_of_order_eq_one Pe) Pne)

@@ -9,7 +9,7 @@ Author : Haitao Zhang
 -- can be used directly without translating from the set based theory first
 
 import data algebra.group .subgroup
-open function algebra set finset
+open function algebra finset
 -- ⁻¹ in eq.ops conflicts with group ⁻¹
 open eq.ops
 
@@ -55,6 +55,7 @@ definition finsubg_to_subg [instance] {H : finset G} [h : is_finsubg H]
 end subg
 
 section lagrange
+open set
 -- this is work based on is_subgroup. will test is_finsubg somewhere else first.
 variable {A : Type}
 variable [deceq : decidable_eq A]
@@ -113,5 +114,54 @@ theorem lagrange_theorem (Psub : H ⊆ G) : card G = card (fin_lcosets H G) * ca
         ... = card (fin_lcosets H G) * card H : Sum_const_eq_card_mul
 
 end lagrange
+
+section lcoset_fintype
+open fintype list subtype
+
+section
+
+lemma dinj_tag {A : Type} (P : A → Prop) : dinj P tag :=
+take a₁ a₂ Pa₁ Pa₂ Pteq, subtype.no_confusion Pteq (λ Pe Pqe, Pe)
+
+end
+
+variables {G : Type} [ambientG : group G] [finG : fintype G] [deceqG : decidable_eq G]
+include ambientG deceqG finG
+
+variables H : finset G
+
+definition is_fin_lcoset [reducible] (S : finset G) : Prop := ∃ g, fin_lcoset H g = S
+
+definition list_lcosets : list (finset G) := erase_dup (map (fin_lcoset H) (elems G))
+
+definition lcoset_type : Type := {S : finset G | is_fin_lcoset H S}
+
+definition all_lcosets : list (lcoset_type H) :=
+dmap (is_fin_lcoset H) tag (list_lcosets H)
+
+variable {H}
+
+lemma is_lcoset_of_mem_list_lcosets {S : finset G}
+  : S ∈ list_lcosets H → is_fin_lcoset H S :=
+assume Pin, obtain g Pg, from exists_of_mem_map (mem_of_mem_erase_dup Pin),
+exists.intro g (and.right Pg)
+
+lemma mem_list_lcosets_of_is_lcoset {S : finset G}
+  : is_fin_lcoset H S → S ∈ list_lcosets H :=
+assume Plcoset, obtain g Pg, from Plcoset,
+Pg ▸ mem_erase_dup (mem_map _ (complete g))
+
+lemma fin_lcosets_eq :
+  fin_lcosets H univ = to_finset_of_nodup (list_lcosets H) !nodup_erase_dup :=
+ext (take S, iff.intro
+  (λ Pimg, obtain g Pg, from exists_of_mem_image Pimg,
+    mem_list_lcosets_of_is_lcoset (exists.intro g (and.right Pg)))
+  (λ Pl, obtain g Pg, from is_lcoset_of_mem_list_lcosets Pl,
+    mem_image_of_mem_of_eq !mem_univ Pg))
+
+variable (H)
+
+
+end lcoset_fintype
 
 end group
