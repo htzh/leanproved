@@ -138,7 +138,7 @@ definition is_fin_lcoset [reducible] (S : finset G) : Prop := ∃ g, fin_lcoset 
 
 definition list_lcosets : list (finset G) := erase_dup (map (fin_lcoset H) (elems G))
 
-definition lcoset_type : Type := {S : finset G | is_fin_lcoset H S}
+definition lcoset_type [reducible] : Type := {S : finset G | is_fin_lcoset H S}
 
 definition all_lcosets : list (lcoset_type H) :=
 dmap (is_fin_lcoset H) tag (list_lcosets H)

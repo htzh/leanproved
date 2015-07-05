@@ -457,12 +457,10 @@ definition action_on_lcoset : G → perm (lcoset_type H) :=
 take g, perm.mk (lcoset_lmul g) lcoset_lmul_inj
 
 variable {H}
-print classes
-print instances fintype
-print instances group
-print instances decidable
+
 lemma action_on_lcoset_hom : homomorphic (action_on_lcoset H) :=
-take g₁ g₂, _
+take g₁ g₂, eq_of_feq (funext take S,
+  (by rewrite [↑action_on_lcoset, -lcoset_lmul_compose]))
 
 variable [finsubgH : is_finsubg H]
 include finsubgH
