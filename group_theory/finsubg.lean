@@ -129,84 +129,94 @@ take a₁ a₂ Pa₁ Pa₂ Pteq, subtype.no_confusion Pteq (λ Pe Pqe, Pe)
 
 end
 
-variables {G : Type} [ambientG : group G] [finG : fintype G] [deceqG : decidable_eq G]
-include ambientG deceqG finG
+variables {A : Type} [ambientA : group A] [finA : fintype A] [deceqA : decidable_eq A]
+include ambientA deceqA finA
 
-variables H : finset G
+variables G H : finset A
 
-definition is_fin_lcoset [reducible] (S : finset G) : Prop := ∃ g, fin_lcoset H g = S
+definition is_fin_lcoset [reducible] (S : finset A) : Prop :=
+  ∃ g, g ∈ G ∧ fin_lcoset H g = S
 
-definition list_lcosets : list (finset G) := erase_dup (map (fin_lcoset H) (elems G))
+definition to_list : list A := list.filter (λ g, g ∈ G) (elems A)
 
-definition lcoset_type [reducible] : Type := {S : finset G | is_fin_lcoset H S}
+definition list_lcosets : list (finset A) := erase_dup (map (fin_lcoset H) (to_list G))
 
-definition all_lcosets : list (lcoset_type H) :=
-dmap (is_fin_lcoset H) tag (list_lcosets H)
+definition lcoset_type [reducible] : Type := {S : finset A | is_fin_lcoset G H S}
 
-variable {H}
+definition all_lcosets : list (lcoset_type G H) :=
+dmap (is_fin_lcoset G H) tag (list_lcosets G H)
 
-definition lcoset_lmul (g : G) (S : lcoset_type H) : lcoset_type H :=
+variables {G H} [finsubgG : is_finsubg G]
+
+include finsubgG
+
+definition lcoset_lmul {g : A} (Pgin : g ∈ G) (S : lcoset_type G H)
+  : lcoset_type G H :=
 tag (fin_lcoset (elt_of S) g)
-  (obtain f Pf, from has_property S,
-  exists.intro (g*f) (by rewrite [-Pf, -fin_lcoset_compose]))
+  (obtain f Pfin Pf, from has_property S,
+  exists.intro (g*f)
+    (by apply and.intro;
+      exact finsubg_mul_closed G _ _ Pgin Pfin;
+      rewrite [-Pf, -fin_lcoset_compose]))
 
-lemma is_lcoset_of_mem_list_lcosets {S : finset G}
-  : S ∈ list_lcosets H → is_fin_lcoset H S :=
-assume Pin, obtain g Pg, from exists_of_mem_map (mem_of_mem_erase_dup Pin),
-exists.intro g (and.right Pg)
+lemma is_lcoset_of_mem_list_lcosets {S : finset A}
+  : S ∈ list_lcosets G H → is_fin_lcoset G H S :=
+assume Pin, obtain g Pgin Pg, from exists_of_mem_map (mem_of_mem_erase_dup Pin),
+exists.intro g (and.intro (of_mem_filter Pgin) Pg)
 
-lemma mem_list_lcosets_of_is_lcoset {S : finset G}
-  : is_fin_lcoset H S → S ∈ list_lcosets H :=
-assume Plcoset, obtain g Pg, from Plcoset,
-Pg ▸ mem_erase_dup (mem_map _ (complete g))
+lemma mem_list_lcosets_of_is_lcoset {S : finset A}
+  : is_fin_lcoset G H S → S ∈ list_lcosets G H :=
+assume Plcoset, obtain g Pgin Pg, from Plcoset,
+Pg ▸ mem_erase_dup (mem_map _ (mem_filter_of_mem (complete g) Pgin))
 
 lemma fin_lcosets_eq :
-  fin_lcosets H univ = to_finset_of_nodup (list_lcosets H) !nodup_erase_dup :=
+  fin_lcosets H G = to_finset_of_nodup (list_lcosets G H) !nodup_erase_dup :=
 ext (take S, iff.intro
-  (λ Pimg, obtain g Pg, from exists_of_mem_image Pimg,
-    mem_list_lcosets_of_is_lcoset (exists.intro g (and.right Pg)))
+  (λ Pimg, mem_list_lcosets_of_is_lcoset (exists_of_mem_image Pimg))
   (λ Pl, obtain g Pg, from is_lcoset_of_mem_list_lcosets Pl,
-    mem_image_of_mem_of_eq !mem_univ Pg))
+    iff.elim_right !mem_image_iff (is_lcoset_of_mem_list_lcosets Pl)))
 
-lemma length_all_lcosets : length (all_lcosets H) = card (fin_lcosets H univ) :=
+lemma length_all_lcosets : length (all_lcosets G H) = card (fin_lcosets H G) :=
 eq.trans
-  (show length (all_lcosets H) = length (list_lcosets H), from
-    assert Pmap : map elt_of (all_lcosets H) = list_lcosets H, from
+  (show length (all_lcosets G H) = length (list_lcosets G H), from
+    assert Pmap : map elt_of (all_lcosets G H) = list_lcosets G H, from
       map_dmap_of_inv_of_pos (λ S P, rfl) (λ S, is_lcoset_of_mem_list_lcosets),
     by rewrite[-Pmap, length_map])
   (by rewrite fin_lcosets_eq)
 
-lemma lcoset_lmul_compose (f g : G) (S : lcoset_type H) :
-lcoset_lmul f (lcoset_lmul g S) = lcoset_lmul (f*g) S :=
+lemma lcoset_lmul_compose {f g : A} (Pf : f ∈ G) (Pg : g ∈ G) (S : lcoset_type G H) :
+lcoset_lmul Pf (lcoset_lmul Pg S) = lcoset_lmul (finsubg_mul_closed G f g Pf Pg) S :=
 subtype.eq !fin_lcoset_compose
 
-lemma lcoset_lmul_one (S : lcoset_type H) : lcoset_lmul 1 S = S :=
+lemma lcoset_lmul_one (S : lcoset_type G H) : lcoset_lmul !finsubg_has_one S = S :=
 subtype.eq (to_set.inj (by rewrite [↑lcoset_lmul, fin_lcoset_eq, glcoset_id]))
 
-lemma lcoset_lmul_inv {g : G} (S : lcoset_type H) :
-  lcoset_lmul g⁻¹ (lcoset_lmul g S) = S :=
-calc lcoset_lmul g⁻¹ _ = lcoset_lmul (g⁻¹*g) S : lcoset_lmul_compose
-                      ... = lcoset_lmul 1 S : mul.left_inv
-                      ... = S : lcoset_lmul_one
+lemma lcoset_lmul_inv {g : A} {Pg : g ∈ G} (S : lcoset_type G H) :
+  lcoset_lmul (finsubg_has_inv G g Pg) (lcoset_lmul Pg S) = S :=
+subtype.eq (to_set.inj begin
+ esimp [lcoset_lmul],
+ rewrite [fin_lcoset_compose, mul.left_inv, fin_lcoset_eq, glcoset_id]
+end)
 
-lemma lcoset_lmul_inj {g : G} : @injective (lcoset_type H) _ (lcoset_lmul g) :=
-injective_of_has_left_inverse (exists.intro (lcoset_lmul g⁻¹) lcoset_lmul_inv)
+lemma lcoset_lmul_inj {g : A} {Pg : g ∈ G}:
+  @injective (lcoset_type G H) _ (lcoset_lmul Pg) :=
+injective_of_has_left_inverse (exists.intro (lcoset_lmul (finsubg_has_inv G g Pg)) lcoset_lmul_inv)
 
-definition lcoset_fintype [instance] : fintype (lcoset_type H) :=
-fintype.mk (all_lcosets H)
-  (dmap_nodup_of_dinj (dinj_tag (is_fin_lcoset H)) !nodup_erase_dup)
+definition lcoset_fintype [instance] : fintype (lcoset_type G H) :=
+fintype.mk (all_lcosets G H)
+  (dmap_nodup_of_dinj (dinj_tag (is_fin_lcoset G H)) !nodup_erase_dup)
   (take s, subtype.destruct s (take S, assume PS, mem_dmap PS (mem_list_lcosets_of_is_lcoset PS)))
 
-lemma card_lcoset_type : card (lcoset_type H) = card (fin_lcosets H univ) :=
+lemma card_lcoset_type : card (lcoset_type G H) = card (fin_lcosets H G) :=
 length_all_lcosets
 
 open nat
 variable [finsubgH : is_finsubg H]
 include finsubgH
 
-theorem lagrange_theorem' : card G = card (lcoset_type H) * card H :=
-calc card G = card (fin_lcosets H univ) * card H : lagrange_theorem !subset_univ
-        ... = card (lcoset_type H) * card H : card_lcoset_type
+theorem lagrange_theorem' (Psub : H ⊆ G) : card G = card (lcoset_type G H) * card H :=
+calc card G = card (fin_lcosets H G) * card H : lagrange_theorem Psub
+        ... = card (lcoset_type G H) * card H : card_lcoset_type
 
 end lcoset_fintype
 

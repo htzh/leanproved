@@ -448,19 +448,37 @@ end cayley
 section lcosets
 open fintype subtype
 
+section
+open list set
+
+structure finite_set (A : Type) :=
+(carrier : set A) (elems : list A) (nodup : nodup elems) (complete : ∀ a, a ∈ carrier ↔ a ∈ elems)
+
+check @finite_set.elems
+definition finite_set_to_finset {A : Type} (s : finite_set A) : finset A :=
+to_finset_of_nodup (finite_set.elems s) (finite_set.nodup s)
+
+structure is_finite [class] {A : Type} (s : set A) :=
+(elems : list A) (nodup : nodup elems) (complete : ∀ a, a ∈ s ↔ a ∈ elems)
+
+definition set_to_finset {A : Type} (s : set A) [fins : is_finite s] :=
+to_finset_of_nodup (is_finite.elems s) (is_finite.nodup s)
+
+end
+
 variables {G : Type} [ambientG : group G] [finG : fintype G] [deceqG : decidable_eq G]
 include ambientG deceqG finG
 
 variables H : finset G
 
-definition action_on_lcoset : G → perm (lcoset_type H) :=
-take g, perm.mk (lcoset_lmul g) lcoset_lmul_inj
+definition action_on_lcoset : G → perm (lcoset_type univ H) :=
+take g, perm.mk (lcoset_lmul (mem_univ g)) lcoset_lmul_inj
 
 variable {H}
 
 lemma action_on_lcoset_hom : homomorphic (action_on_lcoset H) :=
-take g₁ g₂, eq_of_feq (funext take S,
-  (by rewrite [↑action_on_lcoset, -lcoset_lmul_compose]))
+take g₁ g₂, eq_of_feq (funext take S, subtype.eq
+  (by rewrite [↑action_on_lcoset, ↑lcoset_lmul, -fin_lcoset_compose]))
 
 variable [finsubgH : is_finsubg H]
 include finsubgH
