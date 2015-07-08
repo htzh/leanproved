@@ -23,9 +23,9 @@ variable [ambientG : group G]
 include ambientG
 
 definition finset_mul_closed_on [reducible] (H : finset G) : Prop :=
-           ∀ (x y : G), x ∈ H → y ∈ H → x * y ∈ H
+           ∀ x y : G, x ∈ H → y ∈ H → x * y ∈ H
 definition finset_has_inv (H : finset G) : Prop :=
-           ∀ (a : G), a ∈ H → a⁻¹ ∈ H
+           ∀ a : G, a ∈ H → a⁻¹ ∈ H
 structure is_finsubg [class] (H : finset G) : Type :=
           (has_one : 1 ∈ H)
           (mul_closed : finset_mul_closed_on H)
@@ -36,10 +36,10 @@ is_finsubg.mk !mem_univ (λ x y Px Py, !mem_univ) (λ a Pa, !mem_univ)
 
 lemma finsubg_has_one (H : finset G) [h : is_finsubg H] : 1 ∈ H :=
       @is_finsubg.has_one G _ H h
-lemma finsubg_mul_closed (H : finset G) [h : is_finsubg H] : finset_mul_closed_on H :=
-      @is_finsubg.mul_closed G _ H h
-lemma finsubg_has_inv (H : finset G) [h : is_finsubg H] : finset_has_inv H :=
-      @is_finsubg.has_inv G _ H h
+lemma finsubg_mul_closed (H : finset G) [h : is_finsubg H] {x y : G} : x ∈ H → y ∈ H → x * y ∈ H :=
+      @is_finsubg.mul_closed G _ H h x y
+lemma finsubg_has_inv (H : finset G) [h : is_finsubg H] {a : G} :  a ∈ H → a⁻¹ ∈ H :=
+      @is_finsubg.has_inv G _ H h a
 
 variable [deceqG : decidable_eq G]
 include deceqG
@@ -56,7 +56,7 @@ end subg
 
 section lagrange
 open set
--- this is work based on is_subgroup. will test is_finsubg somewhere else first.
+
 variable {A : Type}
 variable [deceq : decidable_eq A]
 include deceq
@@ -81,8 +81,8 @@ lemma fin_lcosets_card_eq {G : finset A} : ∀ gH, gH ∈ fin_lcosets H G → ca
       take gH, assume Pcosets, obtain g Pg, from exists_of_mem_image Pcosets,
       and.right Pg ▸ fin_lcoset_card g
 
-variable [is_subgH : is_subgroup (to_set H)]
-include is_subgH
+variable [is_finsubgH : is_finsubg H]
+include is_finsubgH
 
 lemma fin_lcoset_same (x a : A) : x ∈ (fin_lcoset H a) = (fin_lcoset H x = fin_lcoset H a) :=
       begin
@@ -100,9 +100,12 @@ lemma fin_lcoset_subset {S : finset A} (Psub : S ⊆ H) : ∀ x, x ∈ H → fin
       assert Pcoset : set.subset (x ∘> ts S) (ts H), from subg_lcoset_subset_subg Psubs x Pxs,
       by rewrite [subset_eq_to_set_subset, fin_lcoset_eq x]; exact Pcoset
 
+lemma findubg_conj_closed {g h : A} : g ∈ H → h ∈ H → g ∘c h ∈ H :=
+assume Pgin Phin, finsubg_mul_closed H (finsubg_mul_closed H Pgin Phin) (finsubg_has_inv H Pgin)
+
 variable {G : finset A}
-variable [is_subgG : is_subgroup (to_set G)]
-include is_subgG
+variable [is_finsubgG : is_finsubg G]
+include is_finsubgG
 
 open finset.partition
 
@@ -156,7 +159,7 @@ tag (fin_lcoset (elt_of S) g)
   (obtain f Pfin Pf, from has_property S,
   exists.intro (g*f)
     (by apply and.intro;
-      exact finsubg_mul_closed G _ _ Pgin Pfin;
+      exact finsubg_mul_closed G Pgin Pfin;
       rewrite [-Pf, -fin_lcoset_compose]))
 
 lemma is_lcoset_of_mem_list_lcosets {S : finset A}
@@ -185,14 +188,14 @@ eq.trans
   (by rewrite fin_lcosets_eq)
 
 lemma lcoset_lmul_compose {f g : A} (Pf : f ∈ G) (Pg : g ∈ G) (S : lcoset_type G H) :
-lcoset_lmul Pf (lcoset_lmul Pg S) = lcoset_lmul (finsubg_mul_closed G f g Pf Pg) S :=
+lcoset_lmul Pf (lcoset_lmul Pg S) = lcoset_lmul (finsubg_mul_closed G Pf Pg) S :=
 subtype.eq !fin_lcoset_compose
 
 lemma lcoset_lmul_one (S : lcoset_type G H) : lcoset_lmul !finsubg_has_one S = S :=
 subtype.eq (to_set.inj (by rewrite [↑lcoset_lmul, fin_lcoset_eq, glcoset_id]))
 
 lemma lcoset_lmul_inv {g : A} {Pg : g ∈ G} (S : lcoset_type G H) :
-  lcoset_lmul (finsubg_has_inv G g Pg) (lcoset_lmul Pg S) = S :=
+  lcoset_lmul (finsubg_has_inv G Pg) (lcoset_lmul Pg S) = S :=
 subtype.eq (to_set.inj begin
  esimp [lcoset_lmul],
  rewrite [fin_lcoset_compose, mul.left_inv, fin_lcoset_eq, glcoset_id]
@@ -200,7 +203,7 @@ end)
 
 lemma lcoset_lmul_inj {g : A} {Pg : g ∈ G}:
   @injective (lcoset_type G H) _ (lcoset_lmul Pg) :=
-injective_of_has_left_inverse (exists.intro (lcoset_lmul (finsubg_has_inv G g Pg)) lcoset_lmul_inv)
+injective_of_has_left_inverse (exists.intro (lcoset_lmul (finsubg_has_inv G Pg)) lcoset_lmul_inv)
 
 lemma card_elt_of_lcoset_type (S : lcoset_type G H) : card (elt_of S) = card H :=
 obtain f Pfin Pf, from has_property S, Pf ▸ fin_lcoset_card f
@@ -240,7 +243,52 @@ calc card (Union lcs elt_of) = ∑ lc ∈ lcs, card (elt_of lc) : card_Union_of_
 end lcoset_fintype
 
 section normalizer
+variables {G : Type} [ambientG : group G] [finG : fintype G] [deceqG : decidable_eq G]
+include ambientG deceqG finG
 
+variable H : finset G
+
+definition normalizer : finset G := {g ∈ univ | ∀ h, h ∈ H → g ∘c h ∈ H}
+
+variable {H}
+
+variable [finsubgH : is_finsubg H]
+include finsubgH
+
+lemma sub_normalizer : H ⊆ normalizer H :=
+subset_of_forall take g, assume PginH, mem_filter_of_mem !mem_univ
+  (take h, assume PhinH, findubg_conj_closed PginH PhinH)
+
+lemma normalizer_has_one : 1 ∈ normalizer H :=
+mem_of_subset_of_mem sub_normalizer (finsubg_has_one H)
+
+lemma normalizer_mul_closed : finset_mul_closed_on (normalizer H) :=
+take f g, assume Pfin Pgin,
+mem_filter_of_mem !mem_univ take h, assume Phin, begin
+  rewrite [-conj_compose],
+  apply of_mem_filter Pfin,
+  apply of_mem_filter Pgin,
+  exact Phin
+end
+
+lemma conj_eq_of_mem_normalizer {g : G} : g ∈ normalizer H → image (conj_by g) H = H :=
+assume Pgin,
+eq_of_card_eq_of_subset (card_image_eq_of_inj_on (take h j, assume P1 P2, !conj_inj))
+  (subset_of_forall take h, assume Phin,
+  obtain j Pjin Pj, from exists_of_mem_image Phin,
+  begin substvars, apply of_mem_filter Pgin, exact Pjin end)
+
+lemma normalizer_has_inv : finset_has_inv (normalizer H) :=
+take g, assume Pgin,
+mem_filter_of_mem !mem_univ take h, begin
+  rewrite [-(conj_eq_of_mem_normalizer Pgin) at {1}, mem_image_iff],
+  intro Pex, cases Pex with k Pk,
+  rewrite [-(and.right Pk), conj_compose, mul.left_inv, conj_id],
+  exact and.left Pk
+end
+
+definition normalizer_is_finsubg [instance] : is_finsubg (normalizer H) :=
+is_finsubg.mk normalizer_has_one normalizer_mul_closed normalizer_has_inv
 
 end normalizer
 

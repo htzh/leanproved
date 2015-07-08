@@ -103,6 +103,17 @@ lemma conj_inv_cancel (g : A) : ∀ a, g⁻¹ ∘c g ∘c a = a :=
       g⁻¹ ∘c g ∘c a = g⁻¹*g ∘c a : conj_compose
       ... = 1 ∘c a : mul.left_inv
       ... = a : conj_id
+
+lemma conj_inj (g : A) : injective (conj_by g) :=
+injective_of_has_left_inverse (exists.intro (conj_by g⁻¹) take a, !conj_inv_cancel)
+
+lemma conj_inv (g : A) : ∀ a, (g ∘c a)⁻¹ = g ∘c a⁻¹ :=
+take a, calc
+(g * a * g⁻¹)⁻¹ = g⁻¹⁻¹ * (g * a)⁻¹   : mul_inv
+            ... = g⁻¹⁻¹ * (a⁻¹ * g⁻¹) : mul_inv
+            ... = g⁻¹⁻¹ * a⁻¹ * g⁻¹   : mul.assoc
+            ... = g * a⁻¹ * g⁻¹       : inv_inv
+
 lemma is_conj.refl (a : A) : a ~ a := exists.intro 1 (conj_id a)
 lemma is_conj.symm (a b : A) : a ~ b → b ~ a :=
       assume Pab, obtain x (Pconj : x ∘c b = a), from Pab,

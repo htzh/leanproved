@@ -149,7 +149,7 @@ lemma subg_stab_closed : finset_mul_closed_on (stab hom H a) :=
         hom (f*g) a = (hom f) a : stab_lmul Pgstab
         ... = a : Pf,
       assert PfginH : (f*g) ∈ H,
-        from finsubg_mul_closed H f g (mem_of_mem_filter Pfstab) (mem_of_mem_filter Pgstab),
+        from finsubg_mul_closed H (mem_of_mem_filter Pfstab) (mem_of_mem_filter Pgstab),
       mem_filter_of_mem PfginH Pfg
 
 lemma subg_stab_has_one : 1 ∈ stab hom H a :=
@@ -167,7 +167,7 @@ lemma subg_stab_has_inv : finset_has_inv (stab hom H a) :=
         ... = hom (f⁻¹ * f) a                : is_hom hom
         ... = hom 1 a                        : mul.left_inv
         ... = (1 : perm S) a : hom_map_one hom,
-      assert PfinvinH : f⁻¹ ∈ H, from finsubg_has_inv H f (mem_of_mem_filter Pfstab),
+      assert PfinvinH : f⁻¹ ∈ H, from finsubg_has_inv H (mem_of_mem_filter Pfstab),
       mem_filter_of_mem PfinvinH Pfinv
 
 definition subg_stab_is_finsubg [instance] :
@@ -239,7 +239,8 @@ section partition
 variables {A B : Type} [deceqA : decidable_eq A] [deceqB : decidable_eq B]
 include deceqA
 
-lemma eq_of_singleton_eq {a b : A} : singleton a = singleton b → a = b := sorry
+lemma eq_of_singleton_eq {a b : A} : singleton a = singleton b → a = b :=
+assume Pseq, eq_of_mem_singleton (Pseq ▸ mem_singleton a)
 
 lemma binary_union (P : A → Prop) [decP : decidable_pred P] {S : finset A} :
   S = {a ∈ S | P a} ∪ {a ∈ S | ¬(P a)} :=
@@ -308,7 +309,7 @@ assume Painb Pbinc,
 obtain h PhinH Phba, from exists_of_orbit Painb,
 obtain g PginH Pgcb, from exists_of_orbit Pbinc,
 orbit_of_exists (exists.intro (h*g) (and.intro
-  (finsubg_mul_closed H _ _ PhinH PginH)
+  (finsubg_mul_closed H PhinH PginH)
   (calc hom (h*g) c = perm.f ((hom h) * (hom g)) c : is_hom hom
                 ... = ((hom h) ∘ (hom g)) c : rfl
                 ... = (hom h) b : Pgcb
@@ -321,7 +322,7 @@ assert Phinvab : perm.f (hom h)⁻¹ a = b, from
                       ... = perm.f ((hom h)⁻¹ * (hom h)) b : rfl
                       ... = perm.f (1 : perm S) b : mul.left_inv,
 orbit_of_exists (exists.intro h⁻¹ (and.intro
-  (finsubg_has_inv H _ PhinH)
+  (finsubg_has_inv H PhinH)
   (calc (hom h⁻¹) a = perm.f (hom h)⁻¹ a : hom_map_inv hom h
                 ... = b : Phinvab)))
 
