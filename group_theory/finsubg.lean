@@ -202,6 +202,9 @@ lemma lcoset_lmul_inj {g : A} {Pg : g ∈ G}:
   @injective (lcoset_type G H) _ (lcoset_lmul Pg) :=
 injective_of_has_left_inverse (exists.intro (lcoset_lmul (finsubg_has_inv G g Pg)) lcoset_lmul_inv)
 
+lemma card_elt_of_lcoset_type (S : lcoset_type G H) : card (elt_of S) = card H :=
+obtain f Pfin Pf, from has_property S, Pf ▸ fin_lcoset_card f
+
 definition lcoset_fintype [instance] : fintype (lcoset_type G H) :=
 fintype.mk (all_lcosets G H)
   (dmap_nodup_of_dinj (dinj_tag (is_fin_lcoset G H)) !nodup_erase_dup)
@@ -218,6 +221,27 @@ theorem lagrange_theorem' (Psub : H ⊆ G) : card G = card (lcoset_type G H) * c
 calc card G = card (fin_lcosets H G) * card H : lagrange_theorem Psub
         ... = card (lcoset_type G H) * card H : card_lcoset_type
 
+lemma lcoset_disjoint {S₁ S₂ : lcoset_type G H} : S₁ ≠ S₂ → elt_of S₁ ∩ elt_of S₂ = ∅ :=
+obtain f₁ Pfin₁ Pf₁, from has_property S₁,
+obtain f₂ Pfin₂ Pf₂, from has_property S₂,
+assume Pne, inter_eq_empty_of_disjoint (disjoint.intro
+  take g, begin
+  rewrite [-Pf₁, -Pf₂, *fin_lcoset_same],
+  intro Pgf₁, rewrite [Pgf₁, Pf₁, Pf₂],
+  intro Peq, exact absurd (subtype.eq Peq) Pne
+  end )
+
+lemma card_Union_lcosets (lcs : finset (lcoset_type G H)) :
+  card (Union lcs elt_of) = card lcs * card H :=
+calc card (Union lcs elt_of) = ∑ lc ∈ lcs, card (elt_of lc) : card_Union_of_disjoint lcs elt_of (λ (S₁ S₂ : lcoset_type G H) P₁ P₂ Pne, lcoset_disjoint Pne)
+                         ... = ∑ lc ∈ lcs, card H : Sum_ext (take lc P, card_elt_of_lcoset_type _)
+                         ... = card lcs * card H : Sum_const_eq_card_mul
+
 end lcoset_fintype
+
+section normalizer
+
+
+end normalizer
 
 end group
