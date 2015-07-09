@@ -55,6 +55,13 @@ definition finsubg_to_subg [instance] {H : finset G} [h : is_finsubg H]
 end subg
 
 section lagrange
+
+lemma image_compose {A B C : Type} [deceqB : decidable_eq B] [deceqC : decidable_eq C] {f : B → C} {g : A → B} {s : finset A} :
+  image f (image g s) = image (f∘g) s := sorry
+
+lemma Union_const {A B : Type} [deceqA : decidable_eq A] [deceqB : decidable_eq B] {f : A → finset B} {s : finset A} {t : finset B} :
+  (∀ a, a ∈ s → f a = t) → Union s f = t := sorry
+
 open set
 
 variable {A : Type}
@@ -64,9 +71,21 @@ variable [s : group A]
 include s
 
 definition fin_lcoset (H : finset A) (a : A) := finset.image (lmul_by a) H
+
+definition fin_rcoset (H : finset A) (a : A) : finset A := image (rmul_by a) H
+
 definition fin_lcosets (H G : finset A) := image (fin_lcoset H) G
 
+definition fin_inv : finset A → finset A := image has_inv.inv
+
 variable {H : finset A}
+
+lemma lmul_rmul {a b : A} : (lmul_by a) ∘ (rmul_by b) = (rmul_by b) ∘ (lmul_by a) :=
+funext take c, calc a*(c*b) = (a*c)*b : mul.assoc
+
+lemma fin_lrcoset_comm {a b : A} :
+  fin_lcoset (fin_rcoset H b) a = fin_rcoset (fin_lcoset H a) b :=
+by esimp [fin_lcoset, fin_rcoset]; rewrite [*image_compose, lmul_rmul]
 
 lemma fin_lcoset_eq (a : A) : ts (fin_lcoset H a) = a ∘> (ts H) := calc
       ts (fin_lcoset H a) = coset.l a (ts H) : to_set_image
@@ -100,7 +119,25 @@ lemma fin_lcoset_subset {S : finset A} (Psub : S ⊆ H) : ∀ x, x ∈ H → fin
       assert Pcoset : set.subset (x ∘> ts S) (ts H), from subg_lcoset_subset_subg Psubs x Pxs,
       by rewrite [subset_eq_to_set_subset, fin_lcoset_eq x]; exact Pcoset
 
-lemma findubg_conj_closed {g h : A} : g ∈ H → h ∈ H → g ∘c h ∈ H :=
+lemma finsubg_inv_lcoset_eq_rcoset {a : A} :
+  fin_inv (fin_lcoset H a) = fin_rcoset H a⁻¹ :=
+begin
+  esimp [fin_inv, fin_lcoset, fin_rcoset],
+  rewrite [image_compose],
+  apply ext, intro b,
+  rewrite [*mem_image_iff, ↑compose, ↑lmul_by, ↑rmul_by],
+  apply iff.intro,
+    intro Pl, cases Pl with h Ph, cases Ph with Pin Peq,
+    existsi h⁻¹, apply and.intro,
+      exact finsubg_has_inv H Pin,
+      rewrite [-mul_inv, Peq],
+    intro Pr, cases Pr with h Ph, cases Ph with Pin Peq,
+    existsi h⁻¹, apply and.intro,
+      exact finsubg_has_inv H Pin,
+      rewrite [mul_inv, inv_inv, Peq],
+end
+
+lemma finsubg_conj_closed {g h : A} : g ∈ H → h ∈ H → g ∘c h ∈ H :=
 assume Pgin Phin, finsubg_mul_closed H (finsubg_mul_closed H Pgin Phin) (finsubg_has_inv H Pgin)
 
 variable {G : finset A}
@@ -153,6 +190,11 @@ variables {G H} [finsubgG : is_finsubg G]
 
 include finsubgG
 
+lemma self_is_lcoset : is_fin_lcoset G H H :=
+exists.intro 1 (and.intro !finsubg_has_one begin
+  rewrite [eq_eq_to_set_eq, fin_lcoset_eq, glcoset_id]
+  end)
+
 definition lcoset_lmul {g : A} (Pgin : g ∈ G) (S : lcoset_type G H)
   : lcoset_type G H :=
 tag (fin_lcoset (elt_of S) g)
@@ -161,6 +203,9 @@ tag (fin_lcoset (elt_of S) g)
     (by apply and.intro;
       exact finsubg_mul_closed G Pgin Pfin;
       rewrite [-Pf, -fin_lcoset_compose]))
+
+definition lcoset_mul (S₁ S₂ : lcoset_type G H): finset A :=
+Union (elt_of S₁) (fin_lcoset (elt_of S₂))
 
 lemma is_lcoset_of_mem_list_lcosets {S : finset A}
   : S ∈ list_lcosets G H → is_fin_lcoset G H S :=
@@ -240,9 +285,27 @@ calc card (Union lcs elt_of) = ∑ lc ∈ lcs, card (elt_of lc) : card_Union_of_
                          ... = ∑ lc ∈ lcs, card H : Sum_ext (take lc P, card_elt_of_lcoset_type _)
                          ... = card lcs * card H : Sum_const_eq_card_mul
 
+lemma exists_of_lcoset_type (J : lcoset_type G H) :
+  ∃ j, j ∈ elt_of J ∧ fin_lcoset H j = elt_of J :=
+obtain j Pjin Pj, from has_property J,
+exists.intro j (and.intro (Pj ▸ !fin_mem_lcoset) Pj)
+
+lemma mul_mem_lcoset_mul (J K : lcoset_type G H) {g h} :
+  g ∈ elt_of J → h ∈ elt_of K → g*h ∈ lcoset_mul J K :=
+obtain k Pkin Pk, from has_property K,
+assume Pg, begin
+  rewrite [↑lcoset_mul, mem_Union_iff, -Pk, fin_lcoset_same],
+  intro Ph, existsi g, apply and.intro, exact Pg,
+  rewrite [-Ph, fin_lcoset_compose], apply fin_mem_lcoset
+end
+
 end lcoset_fintype
 
 section normalizer
+open subtype
+
+lemma elt_of_tag {A : Type} {P : A → Prop} {a} {Ha : P a} : elt_of (tag a Ha) = a := rfl
+
 variables {G : Type} [ambientG : group G] [finG : fintype G] [deceqG : decidable_eq G]
 include ambientG deceqG finG
 
@@ -255,12 +318,12 @@ variable {H}
 variable [finsubgH : is_finsubg H]
 include finsubgH
 
-lemma sub_normalizer : H ⊆ normalizer H :=
+lemma subset_normalizer : H ⊆ normalizer H :=
 subset_of_forall take g, assume PginH, mem_filter_of_mem !mem_univ
-  (take h, assume PhinH, findubg_conj_closed PginH PhinH)
+  (take h, assume PhinH, finsubg_conj_closed PginH PhinH)
 
 lemma normalizer_has_one : 1 ∈ normalizer H :=
-mem_of_subset_of_mem sub_normalizer (finsubg_has_one H)
+mem_of_subset_of_mem subset_normalizer (finsubg_has_one H)
 
 lemma normalizer_mul_closed : finset_mul_closed_on (normalizer H) :=
 take f g, assume Pfin Pgin,
@@ -289,6 +352,85 @@ end
 
 definition normalizer_is_finsubg [instance] : is_finsubg (normalizer H) :=
 is_finsubg.mk normalizer_has_one normalizer_mul_closed normalizer_has_inv
+
+lemma lrcoset_same_of_mem_normalizer {g : G} :
+  g ∈ normalizer H → fin_lcoset H g = fin_rcoset H g :=
+assume Pg, ext take h, iff.intro
+  (assume Pl, obtain j Pjin Pj, from exists_of_mem_image Pl,
+  mem_image_of_mem_of_eq (of_mem_filter Pg j Pjin)
+    (calc g*j*g⁻¹*g = g*j : inv_mul_cancel_right
+                ... = h   : Pj))
+  (assume Pr, obtain j Pjin Pj, from exists_of_mem_image Pr,
+  mem_image_of_mem_of_eq (of_mem_filter (finsubg_has_inv (normalizer H) Pg) j Pjin)
+    (calc g*(g⁻¹*j*g⁻¹⁻¹) = g*(g⁻¹*j*g)   : inv_inv
+                      ... = g*(g⁻¹*(j*g)) : mul.assoc
+                      ... = j*g           : mul_inv_cancel_left
+                      ... = h             : Pj))
+
+lemma lcoset_subset_normalizer_of_mem {g : G} :
+  g ∈ normalizer H → fin_lcoset H g ⊆ normalizer H :=
+assume Pgin, fin_lcoset_subset subset_normalizer g Pgin
+
+lemma lcoset_mul_eq_lcoset (J K : lcoset_type (normalizer H) H) {g : G} :
+  g ∈ elt_of J → (lcoset_mul J K) = fin_lcoset (elt_of K) g :=
+assume Pgin,
+obtain j Pjin Pj, from has_property J,
+obtain k Pkin Pk, from has_property K,
+Union_const begin
+  rewrite [-Pk], intro h Phin,
+  assert Phinn : h ∈ normalizer H,
+    apply mem_of_subset_of_mem (lcoset_subset_normalizer_of_mem Pjin),
+    rewrite Pj, assumption,
+  revert Phin Pgin,
+  rewrite [-Pj, *fin_lcoset_same],
+  intro Pheq Pgeq,
+  rewrite [*(lrcoset_same_of_mem_normalizer Pkin), *fin_lrcoset_comm, Pheq, Pgeq]
+end
+
+lemma lcoset_mul_is_lcoset (J K : lcoset_type (normalizer H) H) :
+  is_fin_lcoset (normalizer H) H (lcoset_mul J K) :=
+obtain j Pjin Pj, from has_property J,
+obtain k Pkin Pk, from has_property K,
+exists.intro (j*k) (and.intro (finsubg_mul_closed _ Pjin Pkin)
+  begin rewrite [lcoset_mul_eq_lcoset J K (Pj ▸ fin_mem_lcoset j), -fin_lcoset_compose, Pk] end)
+
+lemma lcoset_inv_is_lcoset (J : lcoset_type (normalizer H) H) :
+  is_fin_lcoset (normalizer H) H (fin_inv (elt_of J)) :=
+obtain j Pjin Pj, from has_property J, exists.intro j⁻¹
+begin
+  rewrite [-Pj, finsubg_inv_lcoset_eq_rcoset],
+  apply and.intro,
+    apply normalizer_has_inv, assumption,
+    apply lrcoset_same_of_mem_normalizer, apply normalizer_has_inv, assumption
+end
+
+definition fin_coset_mul (J K : lcoset_type (normalizer H) H) : lcoset_type (normalizer H) H :=
+tag (lcoset_mul J K) (lcoset_mul_is_lcoset J K)
+
+definition fin_coset_inv (J : lcoset_type (normalizer H) H) : lcoset_type (normalizer H) H :=
+tag (fin_inv (elt_of J)) (lcoset_inv_is_lcoset J)
+
+definition fin_coset_one : lcoset_type (normalizer H) H :=
+tag H self_is_lcoset
+
+local infix `^` := fin_coset_mul
+
+lemma fin_coset_mul_eq_lcoset (J K : lcoset_type (normalizer H) H) {g : G} :
+  g ∈ (elt_of J) → elt_of (J ^ K) = fin_lcoset (elt_of K) g :=
+assume Pgin, lcoset_mul_eq_lcoset J K Pgin
+
+lemma fin_coset_mul_assoc (J K L : lcoset_type (normalizer H) H) :
+  J ^ K ^ L = J ^ (K ^ L) :=
+obtain j Pjin Pj, from exists_of_lcoset_type J,
+obtain k Pkin Pk, from exists_of_lcoset_type K,
+assert Pjk : j*k ∈ elt_of (J ^ K), from mul_mem_lcoset_mul J K Pjin Pkin,
+obtain l Plin Pl, from has_property L,
+subtype.eq (begin
+  rewrite [fin_coset_mul_eq_lcoset (J ^ K) _ Pjk,
+    fin_coset_mul_eq_lcoset J _ Pjin,
+    fin_coset_mul_eq_lcoset K _ Pkin,
+    -Pl, *fin_lcoset_compose]
+  end)
 
 end normalizer
 
