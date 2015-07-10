@@ -29,9 +29,11 @@ include ambientG
 definition psubg (H : finset G) (p m : nat) : Prop := prime p ∧ card H = p^(succ m)
 
 include deceqG finS deceqS
-variables {hom : G → perm S} [Hom : is_hom_class hom]
 variables {H : finset G} [subgH : is_finsubg H]
-include Hom subgH
+include subgH
+
+variables {hom : G → perm S} [Hom : is_hom_class hom]
+include Hom
 open finset.partition
 
 lemma card_mod_eq_of_action_by_psubg {p : nat} {m : nat} :
@@ -58,6 +60,20 @@ take Ppsubg, begin
 end
 
 end pgroup
+
+section psubg_cosets
+open finset fintype
+variables {G : Type} [ambientG : group G] [finG : fintype G] [deceqG : decidable_eq G]
+include ambientG deceqG finG
+
+variables {H : finset G} [finsubgH : is_finsubg H]
+include finsubgH
+
+lemma card_psubg_cosets_mod_eq {p : nat} {m : nat} :
+  psubg H p m → (card (lcoset_type univ H)) mod p = card (lcoset_type (normalizer H) H) mod p :=
+assume Psubg, by rewrite [-card_aol_fixed_points_eq_card_cosets]; exact card_mod_eq_of_action_by_psubg Psubg
+
+end psubg_cosets
 
 section cauchy
 
@@ -323,7 +339,7 @@ lemma peo_seq_one_is_fixed_point : is_fixed_point (rotl_perm_ps A n) univ (peo_s
 take h, assume Pin, by esimp [rotl_perm_ps]
 
 lemma peo_seq_one_mem_fixed_points : peo_seq_one A n ∈ fixed_points (rotl_perm_ps A n) univ :=
-mem_fixed_points_of_is_fixed_point_of_exists peo_seq_one_is_fixed_point (exists.intro !zero !mem_univ)
+mem_fixed_points_of_exists_of_is_fixed_point (exists.intro !zero !mem_univ) peo_seq_one_is_fixed_point
 
 lemma generator_of_prime_of_dvd_order {p : nat}
   : prime p → p ∣ card A → ∃ g : A, g ≠ 1 ∧ g^p = 1 :=

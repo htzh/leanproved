@@ -128,6 +128,9 @@ lemma fin_lcoset_subset {S : finset A} (Psub : S ⊆ H) : ∀ x, x ∈ H → fin
       assert Pcoset : set.subset (x ∘> ts S) (ts H), from subg_lcoset_subset_subg Psubs x Pxs,
       by rewrite [subset_eq_to_set_subset, fin_lcoset_eq x]; exact Pcoset
 
+lemma finsubg_lcoset_id {a : A} : a ∈ H → fin_lcoset H a = H :=
+by rewrite [eq_eq_to_set_eq, fin_lcoset_eq, mem_eq_mem_to_set]; apply subgroup_lcoset_id
+
 lemma finsubg_inv_lcoset_eq_rcoset {a : A} :
   fin_inv (fin_lcoset H a) = fin_rcoset H a⁻¹ :=
 begin
@@ -201,6 +204,12 @@ include finsubgG
 
 lemma self_is_lcoset : is_fin_lcoset G H H :=
 exists.intro 1 (and.intro !finsubg_has_one fin_lcoset_id)
+
+variables (G H)
+
+definition lcoset_one : lcoset_type G H := tag H self_is_lcoset
+
+variables {G H}
 
 definition lcoset_lmul {g : A} (Pgin : g ∈ G) (S : lcoset_type G H)
   : lcoset_type G H :=

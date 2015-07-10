@@ -72,9 +72,9 @@ assume Pain, take h, assume Phin,
   eq_of_mem_singleton
     (of_mem_filter Pain ▸ orbit_of_exists (exists.intro h (and.intro Phin rfl)))
 
-lemma mem_fixed_points_of_is_fixed_point_of_exists :
-  is_fixed_point hom H a → (∃ h, h ∈ H) → a ∈ fixed_points hom H :=
-assume Pfp Pex, mem_filter_of_mem !mem_univ
+lemma mem_fixed_points_of_exists_of_is_fixed_point :
+  (∃ h, h ∈ H) → is_fixed_point hom H a → a ∈ fixed_points hom H :=
+assume Pex Pfp, mem_filter_of_mem !mem_univ
   (ext take x, iff.intro
     (assume Porb, obtain h Phin Pha, from exists_of_orbit Porb,
       by rewrite [mem_singleton_eq, -Pha, Pfp h Phin])
@@ -83,6 +83,14 @@ assume Pfp Pex, mem_filter_of_mem !mem_univ
          intro Peq; rewrite Peq;
          apply orbit_of_exists;
          existsi h; apply and.intro Phin (Pfp h Phin)))
+
+lemma is_fixed_point_iff_mem_fixed_points_of_exists :
+  (∃ h, h ∈ H) → (a ∈ fixed_points hom H ↔ is_fixed_point hom H a) :=
+assume Pex, iff.intro is_fixed_point_of_mem_fixed_points (mem_fixed_points_of_exists_of_is_fixed_point Pex)
+
+lemma is_fixed_point_iff_mem_fixed_points [finsubgH : is_finsubg H] :
+  a ∈ fixed_points hom H ↔ is_fixed_point hom H a :=
+is_fixed_point_iff_mem_fixed_points_of_exists (exists.intro 1 !finsubg_has_one)
 
 end
 
@@ -449,23 +457,9 @@ end cayley
 section lcosets
 open fintype subtype
 
-section
-open list set
-
-structure finite_set (A : Type) :=
-(carrier : set A) (elems : list A) (nodup : nodup elems) (complete : ∀ a, a ∈ carrier ↔ a ∈ elems)
-
-check @finite_set.elems
-definition finite_set_to_finset {A : Type} (s : finite_set A) : finset A :=
-to_finset_of_nodup (finite_set.elems s) (finite_set.nodup s)
-
-structure is_finite [class] {A : Type} (s : set A) :=
-(elems : list A) (nodup : nodup elems) (complete : ∀ a, a ∈ s ↔ a ∈ elems)
-
-definition set_to_finset {A : Type} (s : set A) [fins : is_finite s] :=
-to_finset_of_nodup (is_finite.elems s) (is_finite.nodup s)
-
-end
+lemma elt_eq {A : Type} {P : A → Prop} {a1 a2 : {x | P x}} :
+  a1 = a2 → elt_of a1 = elt_of a2 :=
+assume Peq, congr_arg elt_of Peq
 
 variables {G : Type} [ambientG : group G] [finG : fintype G] [deceqG : decidable_eq G]
 include ambientG deceqG finG
@@ -475,15 +469,77 @@ variables H : finset G
 definition action_on_lcoset : G → perm (lcoset_type univ H) :=
 take g, perm.mk (lcoset_lmul (mem_univ g)) lcoset_lmul_inj
 
+private definition lcoset_of (g : G) : lcoset_type univ H :=
+tag (fin_lcoset H g) (exists.intro g (and.intro !mem_univ rfl))
+
 variable {H}
+
+lemma action_on_lcoset_eq (g : G) (J : lcoset_type univ H)
+  : elt_of (action_on_lcoset H g J) = fin_lcoset (elt_of J) g := rfl
 
 lemma action_on_lcoset_hom : homomorphic (action_on_lcoset H) :=
 take g₁ g₂, eq_of_feq (funext take S, subtype.eq
   (by rewrite [↑action_on_lcoset, ↑lcoset_lmul, -fin_lcoset_compose]))
 
+definition action_on_lcoset_is_hom [instance] : is_hom_class (action_on_lcoset H) :=
+is_hom_class.mk action_on_lcoset_hom
+
 variable [finsubgH : is_finsubg H]
 include finsubgH
 
+lemma aol_fixed_point_subset_normalizer (J : lcoset_type univ H) :
+  is_fixed_point (action_on_lcoset H) H J → elt_of J ⊆ normalizer H :=
+obtain j Pjin Pj, from exists_of_lcoset_type J,
+assume Pfp,
+assert PH : ∀ {h}, h ∈ H → fin_lcoset (fin_lcoset H j) h = fin_lcoset H j,
+  from take h, assume Ph, by rewrite [Pj, -action_on_lcoset_eq, Pfp h Ph],
+subset_of_forall take g, begin
+  rewrite [-Pj, fin_lcoset_same, -inv_inv at {2}],
+  intro Pg,
+  rewrite -Pg at PH,
+  apply finsubg_has_inv,
+  apply mem_filter_of_mem !mem_univ,
+  intro h Ph,
+  assert Phg : fin_lcoset (fin_lcoset H g) h = fin_lcoset H g, exact PH Ph,
+  revert Phg,
+  rewrite [↑conj_by, inv_inv, mul.assoc, fin_lcoset_compose, -fin_lcoset_same, ↑fin_lcoset, mem_image_iff, ↑lmul_by],
+  intro Pex, cases Pex with k Pand, cases Pand with Pkin Pk,
+  rewrite [-Pk, inv_mul_cancel_left], exact Pkin
+end
+
+lemma aol_fixed_point_of_mem_normalizer {g : G} :
+  g ∈ normalizer H → is_fixed_point (action_on_lcoset H) H (lcoset_of H g) :=
+assume Pgin, take h, assume Phin, subtype.eq
+  (by rewrite [action_on_lcoset_eq, ↑lcoset_of, lrcoset_same_of_mem_normalizer Pgin, fin_lrcoset_comm, finsubg_lcoset_id Phin])
+
+lemma aol_fixed_points_eq_normalizer :
+  Union (fixed_points (action_on_lcoset H) H) elt_of = normalizer H :=
+ext take g, begin
+  rewrite [mem_Union_iff],
+  apply iff.intro,
+    intro Pl,
+    cases Pl with L PL, revert PL,
+    rewrite [is_fixed_point_iff_mem_fixed_points],
+    intro Pg,
+    apply mem_of_subset_of_mem,
+      apply aol_fixed_point_subset_normalizer L, exact and.left Pg,
+      exact and.right Pg,
+    intro Pr,
+    existsi (lcoset_of H g), apply and.intro,
+      rewrite [is_fixed_point_iff_mem_fixed_points],
+      exact aol_fixed_point_of_mem_normalizer Pr,
+      exact fin_mem_lcoset g
+end
+
+open nat
+
+lemma card_aol_fixed_points_eq_card_cosets :
+  card (fixed_points (action_on_lcoset H) H) = card (lcoset_type (normalizer H) H) :=
+have Peq : card (fixed_points (action_on_lcoset H) H) * card H = card (lcoset_type (normalizer H) H) * card H, from calc
+  card _ * card H = card (Union (fixed_points (action_on_lcoset H) H) elt_of) : card_Union_lcosets
+              ... = card (normalizer H) : aol_fixed_points_eq_normalizer
+              ... = card (lcoset_type (normalizer H) H) * card H : lagrange_theorem' subset_normalizer,
+eq_of_mul_eq_mul_right (card_pos_of_mem !finsubg_has_one) Peq
 
 end lcosets
 
