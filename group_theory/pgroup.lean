@@ -26,7 +26,7 @@ assume Pain, lt_of_succ_le (card_le_card_of_subset (singleton_subset_of_mem Pain
 variables {G S : Type} [ambientG : group G] [deceqG : decidable_eq G] [finS : fintype S] [deceqS : decidable_eq S]
 include ambientG
 
-definition psubg (H : finset G) (p m : nat) : Prop := prime p ∧ card H = p^(succ m)
+definition psubg (H : finset G) (p m : nat) : Prop := prime p ∧ card H = p^m
 
 include deceqG finS deceqS
 variables {H : finset G} [subgH : is_finsubg H]
@@ -36,9 +36,11 @@ variables {hom : G → perm S} [Hom : is_hom_class hom]
 include Hom
 open finset.partition
 
-lemma card_mod_eq_of_action_by_psubg {p : nat} {m : nat} :
-  psubg H p m → (card S) mod p = (card (fixed_points hom H)) mod p :=
-take Ppsubg, begin
+lemma card_mod_eq_of_action_by_psubg {p : nat} :
+  ∀ {m : nat}, psubg H p m → (card S) mod p = (card (fixed_points hom H)) mod p
+| 0        := by rewrite [↑psubg, pow_zero]; intro Psubg;
+  rewrite [finsubg_eq_singleton_one_of_card_one (and.right Psubg), fixed_points_of_one]
+| (succ m) := take Ppsubg, begin
   rewrite [@orbit_class_equation' G S ambientG finS deceqS hom Hom H subgH],
   apply add_mod_eq_of_dvd, apply dvd_Sum_of_dvd,
   intro s Psin,
@@ -57,7 +59,7 @@ take Ppsubg, begin
   apply or.elim (divisor_of_prime_pow Pprime Pdvd),
     intro Pcardeq, contradiction,
     intro Ppdvd, exact Ppdvd
-end
+  end
 
 end pgroup
 
@@ -346,7 +348,7 @@ lemma generator_of_prime_of_dvd_order {p : nat}
 assume Pprime Pdvd,
 let pp := nat.pred p, spp := nat.succ pp in
 assert Peq : spp = p, from succ_pred_prime Pprime,
-have Ppsubg : psubg (@univ (fin spp) _) spp 0,
+have Ppsubg : psubg (@univ (fin spp) _) spp 1,
   from and.intro (eq.symm Peq ▸ Pprime) (by rewrite [Peq, card_fin, pow_one]),
 have Pcardmod : (nat.pow (card A) pp) mod p = (card (fixed_points (rotl_perm_ps A pp) univ)) mod p,
   from Peq ▸ card_peo_seq ▸ card_mod_eq_of_action_by_psubg Ppsubg,
@@ -387,4 +389,38 @@ check @cauchy_theorem
 end rotl_peo
 
 end cauchy
+
+section sylow
+
+lemma pow_dvd_of_pow_succ_dvd {p i n : nat} : p^(succ i) ∣ n → p^i ∣ n := sorry
+
+lemma dvd_of_pow_succ_dvd_mul_pow {p i n : nat} :  p^(succ i) ∣ (n * p^i) → p ∣ n := sorry
+
+open finset fintype
+
+variables {G : Type} [ambientG : group G] [finG : fintype G] [deceqG : decidable_eq G]
+include ambientG deceqG finG
+
+theorem first_sylow_theorem {p : nat} (Pp : prime p) :
+  ∀ n, p^n ∣ card G → ∃ H : finset G, finset_is_subgroup H ∧ card H = p^n
+| 0        := assume Pdvd, exists.intro (singleton 1)
+  (by rewrite [card_singleton, pow_zero];
+      apply and.intro;
+        apply finsubg_is_subgroup;
+        exact rfl)
+| (succ n) := assume Pdvd,
+  obtain H PH PcardH, from first_sylow_theorem n (pow_dvd_of_pow_succ_dvd Pdvd),
+  assert Ppsubg : psubg H p n, from and.intro Pp PcardH,
+  assert PfinsubgH : is_finsubg H, from finset_is_finsubg PH,
+  assert Ppowsucc : p^(succ n) ∣ (card (lcoset_type univ H) * p^n),
+    by rewrite [-PcardH, -(lagrange_theorem' !subset_univ)]; exact Pdvd,
+  assert Ppdvd : p ∣ card (lcoset_type (normalizer H) H), from
+    dvd_of_mod_eq_zero (by rewrite [-(card_psubg_cosets_mod_eq Ppsubg), -dvd_iff_mod_eq_zero]; exact dvd_of_pow_succ_dvd_mul_pow Ppowsucc),
+  obtain J PJ, from cauchy_theorem Pp Ppdvd,
+  exists.intro (fin_coset_Union (cyc J))
+    (and.intro finsubg_is_subgroup
+      (by rewrite [pow_succ', -PcardH, -PJ]; apply card_Union_lcosets))
+
+end sylow
+
 end group

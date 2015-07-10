@@ -26,6 +26,9 @@ definition finset_mul_closed_on [reducible] (H : finset G) : Prop :=
            ∀ x y : G, x ∈ H → y ∈ H → x * y ∈ H
 definition finset_has_inv (H : finset G) : Prop :=
            ∀ a : G, a ∈ H → a⁻¹ ∈ H
+definition finset_is_subgroup (H : finset G) : Prop :=
+1 ∈ H ∧ finset_mul_closed_on H ∧ finset_has_inv H
+
 structure is_finsubg [class] (H : finset G) : Type :=
           (has_one : 1 ∈ H)
           (mul_closed : finset_mul_closed_on H)
@@ -34,12 +37,23 @@ structure is_finsubg [class] (H : finset G) : Type :=
 definition univ_is_finsubg [instance] [finG : fintype G] : is_finsubg (@finset.univ G _) :=
 is_finsubg.mk !mem_univ (λ x y Px Py, !mem_univ) (λ a Pa, !mem_univ)
 
+definition one_is_finsubg [instance] : is_finsubg (singleton (1:G)) :=
+is_finsubg.mk !mem_singleton
+  (λ x y Px Py, by rewrite [eq_of_mem_singleton Px, eq_of_mem_singleton Py, one_mul]; apply mem_singleton)
+  (λ x Px, by rewrite [eq_of_mem_singleton Px, one_inv]; apply mem_singleton)
+
+definition finset_is_finsubg [instance] {H : finset G} (PH : finset_is_subgroup H) : is_finsubg H :=
+is_finsubg.mk (and.left PH) (and.left (and.right PH)) (and.right (and.right PH))
+
 lemma finsubg_has_one (H : finset G) [h : is_finsubg H] : 1 ∈ H :=
       @is_finsubg.has_one G _ H h
 lemma finsubg_mul_closed (H : finset G) [h : is_finsubg H] {x y : G} : x ∈ H → y ∈ H → x * y ∈ H :=
       @is_finsubg.mul_closed G _ H h x y
 lemma finsubg_has_inv (H : finset G) [h : is_finsubg H] {a : G} :  a ∈ H → a⁻¹ ∈ H :=
       @is_finsubg.has_inv G _ H h a
+
+lemma finsubg_is_subgroup {H : finset G} [h : is_finsubg H] : finset_is_subgroup H :=
+and.intro !finsubg_has_one (and.intro (@is_finsubg.mul_closed G _ H h) (@is_finsubg.has_inv G _ H _))
 
 variable [deceqG : decidable_eq G]
 include deceqG
@@ -52,6 +66,14 @@ definition finsubg_to_subg [instance] {H : finset G} [h : is_finsubg H]
              apply finsubg_mul_closed H end)
            (take a, begin repeat rewrite -mem_eq_mem_to_set,
              apply finsubg_has_inv H end)
+
+open nat
+lemma finsubg_eq_singleton_one_of_card_one {H : finset G} [h : is_finsubg H] :
+  card H = 1 → H = singleton 1 :=
+assume Pcard, eq.symm (eq_of_card_eq_of_subset (by rewrite [Pcard])
+  (subset_of_forall take g,
+    by rewrite [mem_singleton_eq]; intro Pg; rewrite Pg; exact finsubg_has_one H))
+
 end subg
 
 section lagrange
@@ -204,6 +226,10 @@ include finsubgG
 
 lemma self_is_lcoset : is_fin_lcoset G H H :=
 exists.intro 1 (and.intro !finsubg_has_one fin_lcoset_id)
+
+lemma lcoset_subset_of_subset (J : lcoset_type G H) : H ⊆ G → elt_of J ⊆ G :=
+assume Psub, obtain j Pjin Pj, from has_property J,
+by rewrite [-Pj]; apply fin_lcoset_subset Psub; exact Pjin
 
 variables (G H)
 
@@ -369,6 +395,14 @@ end
 definition normalizer_is_finsubg [instance] : is_finsubg (normalizer H) :=
 is_finsubg.mk normalizer_has_one normalizer_mul_closed normalizer_has_inv
 
+lemma lcoset_subset_normalizer (J : lcoset_type (normalizer H) H) :
+  elt_of J ⊆ normalizer H :=
+lcoset_subset_of_subset J subset_normalizer
+
+lemma lcoset_subset_normalizer_of_mem {g : G} :
+  g ∈ normalizer H → fin_lcoset H g ⊆ normalizer H :=
+assume Pgin, fin_lcoset_subset subset_normalizer g Pgin
+
 lemma lrcoset_same_of_mem_normalizer {g : G} :
   g ∈ normalizer H → fin_lcoset H g = fin_rcoset H g :=
 assume Pg, ext take h, iff.intro
@@ -382,10 +416,6 @@ assume Pg, ext take h, iff.intro
                       ... = g*(g⁻¹*(j*g)) : mul.assoc
                       ... = j*g           : mul_inv_cancel_left
                       ... = h             : Pj))
-
-lemma lcoset_subset_normalizer_of_mem {g : G} :
-  g ∈ normalizer H → fin_lcoset H g ⊆ normalizer H :=
-assume Pgin, fin_lcoset_subset subset_normalizer g Pgin
 
 lemma lcoset_mul_eq_lcoset (J K : lcoset_type (normalizer H) H) {g : G} :
   g ∈ elt_of J → (lcoset_mul J K) = fin_lcoset (elt_of K) g :=
@@ -473,6 +503,42 @@ variable (H)
 
 definition fin_coset_group [instance] : group (lcoset_type (normalizer H) H) :=
 group.mk fin_coset_mul fin_coset_mul_assoc fin_coset_one fin_coset_one_mul fin_coset_mul_one fin_coset_inv fin_coset_left_inv
+
+private definition coset_of_mem {g : G} (Pgin : g ∈ normalizer H) :
+  lcoset_type (normalizer H) H :=
+tag (fin_lcoset H g) (exists.intro g (and.intro Pgin rfl))
+
+variables {H} (Hc : finset (lcoset_type (normalizer H) H))
+
+definition fin_coset_Union : finset G := Union Hc elt_of
+
+variables {Hc} [finsubgHc : is_finsubg Hc]
+include finsubgHc
+
+lemma mem_normalizer_of_mem_fcU {j : G} : j ∈ fin_coset_Union Hc → j ∈ normalizer H :=
+assume Pjin, obtain J PJ PjJ, from iff.elim_left !mem_Union_iff Pjin,
+mem_of_subset_of_mem !lcoset_subset_normalizer PjJ
+
+lemma fcU_has_one : (1:G) ∈ fin_coset_Union Hc :=
+iff.elim_right (mem_Union_iff Hc elt_of (1:G))
+  (exists.intro 1 (and.intro (finsubg_has_one Hc) (finsubg_has_one H)))
+
+lemma fcU_has_inv : finset_has_inv (fin_coset_Union Hc) :=
+take j, assume Pjin, obtain J PJ PjJ, from iff.elim_left !mem_Union_iff Pjin,
+have PJinv : J⁻¹ ∈ Hc, from finsubg_has_inv Hc PJ,
+have Pjinv : j⁻¹ ∈ elt_of J⁻¹, from inv_mem_fin_inv PjJ,
+iff.elim_right !mem_Union_iff (exists.intro J⁻¹ (and.intro PJinv Pjinv))
+
+lemma fcU_mul_closed : finset_mul_closed_on (fin_coset_Union Hc) :=
+take j k, assume Pjin Pkin,
+obtain J PJ PjJ, from iff.elim_left !mem_Union_iff Pjin,
+obtain K PK PkK, from iff.elim_left !mem_Union_iff Pkin,
+assert Pjk : j*k ∈ elt_of (J*K), from mul_mem_lcoset_mul J K PjJ PkK,
+iff.elim_right !mem_Union_iff
+  (exists.intro (J*K) (and.intro (finsubg_mul_closed Hc PJ PK) Pjk))
+
+definition fcU_is_finsubg [instance] : is_finsubg (fin_coset_Union Hc) :=
+is_finsubg.mk fcU_has_one fcU_mul_closed fcU_has_inv
 
 end normalizer
 

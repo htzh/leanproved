@@ -92,6 +92,18 @@ lemma is_fixed_point_iff_mem_fixed_points [finsubgH : is_finsubg H] :
   a ∈ fixed_points hom H ↔ is_fixed_point hom H a :=
 is_fixed_point_iff_mem_fixed_points_of_exists (exists.intro 1 !finsubg_has_one)
 
+lemma is_fixed_point_of_one : is_fixed_point hom (singleton 1) a :=
+take h, assume Ph, by rewrite [eq_of_mem_singleton Ph, hom_map_one]
+
+lemma fixed_points_of_one : fixed_points hom (singleton 1) = univ :=
+ext take s, iff.intro (assume Pl, mem_univ s)
+  (assume Pr, mem_fixed_points_of_exists_of_is_fixed_point
+    (exists.intro 1 !mem_singleton) is_fixed_point_of_one)
+
+open fintype
+lemma card_fixed_points_of_one : card (fixed_points hom (singleton 1)) = card S :=
+by rewrite [fixed_points_of_one]
+
 end
 
 variable [deceqG : decidable_eq G]
@@ -456,10 +468,6 @@ end cayley
 
 section lcosets
 open fintype subtype
-
-lemma elt_eq {A : Type} {P : A → Prop} {a1 a2 : {x | P x}} :
-  a1 = a2 → elt_of a1 = elt_of a2 :=
-assume Peq, congr_arg elt_of Peq
 
 variables {G : Type} [ambientG : group G] [finG : fintype G] [deceqG : decidable_eq G]
 include ambientG deceqG finG
