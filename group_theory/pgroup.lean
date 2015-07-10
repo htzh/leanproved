@@ -392,9 +392,21 @@ end cauchy
 
 section sylow
 
-lemma pow_dvd_of_pow_succ_dvd {p i n : nat} : p^(succ i) ∣ n → p^i ∣ n := sorry
+lemma pow_dvd_of_pow_succ_dvd {p i n : nat} : p^(succ i) ∣ n → p^i ∣ n :=
+assume Psuccdvd,
+assert Pdvdsucc : p^i ∣ p^(succ i), from by rewrite [pow_succ]; apply dvd_of_eq_mul; apply rfl,
+dvd.trans Pdvdsucc Psuccdvd
 
-lemma dvd_of_pow_succ_dvd_mul_pow {p i n : nat} :  p^(succ i) ∣ (n * p^i) → p ∣ n := sorry
+lemma prime_pos {p : nat} : prime p → p > 0 :=
+assume Pp, succ_pred_prime Pp ▸ lt_succ_of_lt (pred_prime_pos Pp)
+
+lemma pow_pos_of_pos {p : nat} (Ppos : p > 0) : ∀ n, p^n > 0
+| 0        := by rewrite [pow_zero]; apply zero_lt_succ
+| (succ n) := by rewrite [pow_succ']; apply mul_pos Ppos; exact pow_pos_of_pos n
+
+lemma dvd_of_pow_succ_dvd_mul_pow {p i n : nat} (Ppos : p > 0) :
+  p^(succ i) ∣ (n * p^i) → p ∣ n :=
+by rewrite [pow_succ']; apply dvd_of_mul_dvd_mul_right; apply pow_pos_of_pos Ppos
 
 open finset fintype
 
@@ -415,7 +427,9 @@ theorem first_sylow_theorem {p : nat} (Pp : prime p) :
   assert Ppowsucc : p^(succ n) ∣ (card (lcoset_type univ H) * p^n),
     by rewrite [-PcardH, -(lagrange_theorem' !subset_univ)]; exact Pdvd,
   assert Ppdvd : p ∣ card (lcoset_type (normalizer H) H), from
-    dvd_of_mod_eq_zero (by rewrite [-(card_psubg_cosets_mod_eq Ppsubg), -dvd_iff_mod_eq_zero]; exact dvd_of_pow_succ_dvd_mul_pow Ppowsucc),
+    dvd_of_mod_eq_zero
+      (by rewrite [-(card_psubg_cosets_mod_eq Ppsubg), -dvd_iff_mod_eq_zero];
+      exact dvd_of_pow_succ_dvd_mul_pow (prime_pos Pp) Ppowsucc),
   obtain J PJ, from cauchy_theorem Pp Ppdvd,
   exists.intro (fin_coset_Union (cyc J))
     (and.intro finsubg_is_subgroup
