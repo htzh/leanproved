@@ -56,7 +56,7 @@ lemma card_mod_eq_of_action_by_psubg {p : nat} :
     rewrite -PcardH,
     apply dvd_of_eq_mul (finset.card (stab hom H a)),
     apply orbit_stabilizer_theorem,
-  apply or.elim (divisor_of_prime_pow Pprime Pdvd),
+  apply or.elim (eq_one_or_dvd_of_dvd_prime_pow Pprime Pdvd),
     intro Pcardeq, contradiction,
     intro Ppdvd, exact Ppdvd
   end
@@ -380,11 +380,9 @@ theorem cauchy_theorem {p : nat} : prime p → p ∣ card A → ∃ g : A, order
 assume Pprime Pdvd,
 obtain g Pne Pgpow, from generator_of_prime_of_dvd_order Pprime Pdvd,
 assert Porder : order g ∣ p, from order_dvd_of_pow_eq_one Pgpow,
-or.elim (divisor_of_prime Pprime Porder)
+or.elim (eq_one_or_eq_self_of_prime_of_dvd Pprime Porder)
   (λ Pe, absurd (eq_one_of_order_eq_one Pe) Pne)
   (λ Porderp, exists.intro g Porderp)
-
-check @cauchy_theorem
 
 end rotl_peo
 
@@ -434,6 +432,8 @@ theorem first_sylow_theorem {p : nat} (Pp : prime p) :
   exists.intro (fin_coset_Union (cyc J))
     (and.intro finsubg_is_subgroup
       (by rewrite [pow_succ', -PcardH, -PJ]; apply card_Union_lcosets))
+
+check @first_sylow_theorem
 
 end sylow
 
