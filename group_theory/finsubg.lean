@@ -82,7 +82,7 @@ lemma image_compose {A B C : Type} [deceqB : decidable_eq B] [deceqC : decidable
   image f (image g s) = image (f∘g) s := sorry
 
 lemma Union_const {A B : Type} [deceqA : decidable_eq A] [deceqB : decidable_eq B] {f : A → finset B} {s : finset A} {t : finset B} :
-  (∀ a, a ∈ s → f a = t) → Union s f = t := sorry
+  s ≠ ∅ → (∀ a, a ∈ s → f a = t) → Union s f = t := sorry
 
 open set
 
@@ -249,6 +249,15 @@ tag (fin_lcoset (elt_of S) g)
 definition lcoset_mul (S₁ S₂ : lcoset_type G H): finset A :=
 Union (elt_of S₁) (fin_lcoset (elt_of S₂))
 
+lemma mul_mem_lcoset_mul (J K : lcoset_type G H) {g h} :
+  g ∈ elt_of J → h ∈ elt_of K → g*h ∈ lcoset_mul J K :=
+assume Pg, begin
+  rewrite [↑lcoset_mul, mem_Union_iff, ↑fin_lcoset],
+  intro Ph, existsi g, apply and.intro, exact Pg,
+  rewrite [mem_image_iff, ↑lmul_by],
+  existsi h, exact and.intro Ph rfl
+end
+
 lemma is_lcoset_of_mem_list_lcosets {S : finset A}
   : S ∈ list_lcosets G H → is_fin_lcoset G H S :=
 assume Pin, obtain g Pgin Pg, from exists_of_mem_map (mem_of_mem_erase_dup Pin),
@@ -332,14 +341,9 @@ lemma exists_of_lcoset_type (J : lcoset_type G H) :
 obtain j Pjin Pj, from has_property J,
 exists.intro j (and.intro (Pj ▸ !fin_mem_lcoset) Pj)
 
-lemma mul_mem_lcoset_mul (J K : lcoset_type G H) {g h} :
-  g ∈ elt_of J → h ∈ elt_of K → g*h ∈ lcoset_mul J K :=
-obtain k Pkin Pk, from has_property K,
-assume Pg, begin
-  rewrite [↑lcoset_mul, mem_Union_iff, -Pk, fin_lcoset_same],
-  intro Ph, existsi g, apply and.intro, exact Pg,
-  rewrite [-Ph, fin_lcoset_compose], apply fin_mem_lcoset
-end
+lemma lcoset_not_empty (J : lcoset_type G H) : elt_of J ≠ ∅ :=
+obtain j Pjin Pj, from has_property J,
+assume Pempty, absurd (by rewrite [-Pempty, -Pj]; apply fin_mem_lcoset) (not_mem_empty j)
 
 end lcoset_fintype
 
@@ -422,7 +426,7 @@ lemma lcoset_mul_eq_lcoset (J K : lcoset_type (normalizer H) H) {g : G} :
 assume Pgin,
 obtain j Pjin Pj, from has_property J,
 obtain k Pkin Pk, from has_property K,
-Union_const begin
+Union_const (lcoset_not_empty J) begin
   rewrite [-Pk], intro h Phin,
   assert Phinn : h ∈ normalizer H,
     apply mem_of_subset_of_mem (lcoset_subset_normalizer_of_mem Pjin),
