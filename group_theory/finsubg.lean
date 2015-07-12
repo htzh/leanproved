@@ -78,12 +78,6 @@ end subg
 
 section lagrange
 
-lemma image_compose {A B C : Type} [deceqB : decidable_eq B] [deceqC : decidable_eq C] {f : B → C} {g : A → B} {s : finset A} :
-  image f (image g s) = image (f∘g) s := sorry
-
-lemma Union_const {A B : Type} [deceqA : decidable_eq A] [deceqB : decidable_eq B] {f : A → finset B} {s : finset A} {t : finset B} :
-  s ≠ ∅ → (∀ a, a ∈ s → f a = t) → Union s f = t := sorry
-
 open set
 
 variable {A : Type}
@@ -107,7 +101,7 @@ funext take c, calc a*(c*b) = (a*c)*b : mul.assoc
 
 lemma fin_lrcoset_comm {a b : A} :
   fin_lcoset (fin_rcoset H b) a = fin_rcoset (fin_lcoset H a) b :=
-by esimp [fin_lcoset, fin_rcoset]; rewrite [*image_compose, lmul_rmul]
+by esimp [fin_lcoset, fin_rcoset]; rewrite [-*image_compose, lmul_rmul]
 
 lemma inv_mem_fin_inv {a : A} : a ∈ H → a⁻¹ ∈ fin_inv H :=
 assume Pin, mem_image_of_mem_of_eq Pin rfl
@@ -157,7 +151,7 @@ lemma finsubg_inv_lcoset_eq_rcoset {a : A} :
   fin_inv (fin_lcoset H a) = fin_rcoset H a⁻¹ :=
 begin
   esimp [fin_inv, fin_lcoset, fin_rcoset],
-  rewrite [image_compose],
+  rewrite [-image_compose],
   apply ext, intro b,
   rewrite [*mem_image_iff, ↑compose, ↑lmul_by, ↑rmul_by],
   apply iff.intro,
