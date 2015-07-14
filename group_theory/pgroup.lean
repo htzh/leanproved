@@ -392,36 +392,12 @@ variables {G : Type} [ambientG : group G] [finG : fintype G] [deceqG : decidable
 include ambientG deceqG finG
 
 theorem first_sylow_theorem {p : nat} (Pp : prime p) :
-  ∀ n, p^n ∣ card G → ∃ H : finset G, finset_is_subgroup H ∧ card H = p^n
-| 0        := assume Pdvd, exists.intro (singleton 1)
-  (by rewrite [card_singleton, pow_zero];
-      apply and.intro;
-        apply finsubg_is_subgroup;
-        exact rfl)
-| (succ n) := assume Pdvd,
-  obtain H PH PcardH, from first_sylow_theorem n (pow_dvd_of_pow_succ_dvd Pdvd),
-  assert Ppsubg : psubg H p n, from and.intro Pp PcardH,
-  assert PfinsubgH : is_finsubg H, from finset_is_finsubg PH,
-  assert Ppowsucc : p^(succ n) ∣ (card (lcoset_type univ H) * p^n),
-    by rewrite [-PcardH, -(lagrange_theorem' !subset_univ)]; exact Pdvd,
-  assert Ppdvd : p ∣ card (lcoset_type (normalizer H) H), from
-    dvd_of_mod_eq_zero
-      (by rewrite [-(card_psubg_cosets_mod_eq Ppsubg), -dvd_iff_mod_eq_zero];
-      exact dvd_of_pow_succ_dvd_mul_pow (pos_of_prime Pp) Ppowsucc),
-  obtain J PJ, from cauchy_theorem Pp Ppdvd,
-  exists.intro (fin_coset_Union (cyc J))
-    (and.intro finsubg_is_subgroup
-      (by rewrite [pow_succ', -PcardH, -PJ]; apply card_Union_lcosets))
-
-check @first_sylow_theorem
-
-theorem first_sylow_theorem' {p : nat} (Pp : prime p) :
   ∀ n, p^n ∣ card G → ∃ (H : finset G) (finsubgH : is_finsubg H), card H = p^n
 | 0        := assume Pdvd, exists.intro (singleton 1)
   (exists.intro one_is_finsubg
     (by rewrite [card_singleton, pow_zero]))
 | (succ n) := assume Pdvd,
-  obtain H PfinsubgH PcardH, from first_sylow_theorem' n (pow_dvd_of_pow_succ_dvd Pdvd),
+  obtain H PfinsubgH PcardH, from first_sylow_theorem n (pow_dvd_of_pow_succ_dvd Pdvd),
   assert Ppsubg : psubg H p n, from and.intro Pp PcardH,
   assert Ppowsucc : p^(succ n) ∣ (card (lcoset_type univ H) * p^n),
     by rewrite [-PcardH, -(lagrange_theorem' !subset_univ)]; exact Pdvd,
@@ -433,6 +409,8 @@ theorem first_sylow_theorem' {p : nat} (Pp : prime p) :
   exists.intro (fin_coset_Union (cyc J))
     (exists.intro _
       (by rewrite [pow_succ', -PcardH, -PJ]; apply card_Union_lcosets))
+
+check @first_sylow_theorem
 
 end sylow
 

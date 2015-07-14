@@ -26,8 +26,6 @@ definition finset_mul_closed_on [reducible] (H : finset G) : Prop :=
            ∀ x y : G, x ∈ H → y ∈ H → x * y ∈ H
 definition finset_has_inv (H : finset G) : Prop :=
            ∀ a : G, a ∈ H → a⁻¹ ∈ H
-definition finset_is_subgroup (H : finset G) : Prop :=
-1 ∈ H ∧ finset_mul_closed_on H ∧ finset_has_inv H
 
 structure is_finsubg [class] (H : finset G) : Type :=
           (has_one : 1 ∈ H)
@@ -42,18 +40,12 @@ is_finsubg.mk !mem_singleton
   (λ x y Px Py, by rewrite [eq_of_mem_singleton Px, eq_of_mem_singleton Py, one_mul]; apply mem_singleton)
   (λ x Px, by rewrite [eq_of_mem_singleton Px, one_inv]; apply mem_singleton)
 
-definition finset_is_finsubg [instance] {H : finset G} (PH : finset_is_subgroup H) : is_finsubg H :=
-is_finsubg.mk (and.left PH) (and.left (and.right PH)) (and.right (and.right PH))
-
 lemma finsubg_has_one (H : finset G) [h : is_finsubg H] : 1 ∈ H :=
       @is_finsubg.has_one G _ H h
 lemma finsubg_mul_closed (H : finset G) [h : is_finsubg H] {x y : G} : x ∈ H → y ∈ H → x * y ∈ H :=
       @is_finsubg.mul_closed G _ H h x y
 lemma finsubg_has_inv (H : finset G) [h : is_finsubg H] {a : G} :  a ∈ H → a⁻¹ ∈ H :=
       @is_finsubg.has_inv G _ H h a
-
-lemma finsubg_is_subgroup {H : finset G} [h : is_finsubg H] : finset_is_subgroup H :=
-and.intro !finsubg_has_one (and.intro (@is_finsubg.mul_closed G _ H h) (@is_finsubg.has_inv G _ H _))
 
 variable [deceqG : decidable_eq G]
 include deceqG
