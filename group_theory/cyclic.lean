@@ -63,18 +63,13 @@ assume Pne, decidable.by_cases
     rewrite [if_neg Pnlt], apply sub_pos_of_lt,
     apply lt_of_le_and_ne (nat.le_of_not_gt Pnlt) (ne.symm Pne) end)
 
-lemma max_lt_of_lt_of_lt {i j n : nat} : i < n → j < n → max i j < n :=
-assume Pilt Pjlt, decidable.by_cases
-  (λ Plt : i < j, by rewrite [↑max, if_pos Plt]; exact Pjlt)
-  (λ Pnlt : ¬ i < j, by rewrite [↑max, if_neg Pnlt]; exact Pilt)
-
 lemma max_lt {n : nat} (i j : fin n) : max i j < n :=
-max_lt_of_lt_of_lt (is_lt i) (is_lt j)
+max_lt (is_lt i) (is_lt j)
 
 variable {A : Type}
 
 open list
-lemma zero_lt_length_of_mem {a : A} : ∀ {l : list A}, a ∈ l → 0 < length l
+lemma length_pos_of_mem {a : A} : ∀ {l : list A}, a ∈ l → 0 < length l
 | []     := assume Pinnil, by contradiction
 | (b::l) := assume Pin, !zero_lt_succ
 
@@ -121,7 +116,7 @@ include finA
 open fintype
 
 lemma card_pos : 0 < card A :=
-  zero_lt_length_of_mem (mem_univ 1)
+  length_pos_of_mem (mem_univ 1)
 
 variable [deceqA : decidable_eq A]
 include deceqA
@@ -167,7 +162,7 @@ begin
 end
 
 lemma order_pos (a : A) : 0 < order a :=
-zero_lt_length_of_mem (cyc_has_one a)
+length_pos_of_mem (cyc_has_one a)
 
 lemma cyc_mul_closed (a : A) : finset_mul_closed_on (cyc a) :=
 take g h, assume Pgin Phin,
@@ -302,12 +297,6 @@ open nat list
 lemma lt_succ_of_lt {i j : nat} : i < j → i < succ j :=
 assume Plt, lt.trans Plt (self_lt_succ j)
 
-lemma map_append {A B : Type} {f : A → B} : ∀ {l₁ l₂ : list A}, map f (l₁++l₂) = (map f l₁)++(map f l₂)
-| nil    := take l, rfl
-| (a::l) := take l', begin rewrite [append_cons, *map_cons, append_cons, map_append] end
-
-lemma map_singleton {A B : Type} {f : A → B} (a : A) : map f [a] = [f a] := rfl
-
 lemma list.upto_step : ∀ {n : nat}, upto (succ n) = (map succ (upto n))++[0]
 | 0        := rfl
 | (succ n) := begin rewrite [upto_succ n, map_cons, append_cons, -list.upto_step] end
@@ -337,7 +326,7 @@ funext take i, eq_of_veq (begin rewrite [↑lift_succ, -val_lift, *val_succ, -va
 definition upto_step : ∀ {n : nat}, fin.upto (succ n) = (map succ (upto n))++[zero n]
 | 0        := rfl
 | (succ n) := begin rewrite [upto_succ n, map_cons, append_cons, succ_max, upto_succ, -lift_zero],
-  congruence, rewrite [map_map, -lift_succ.comm, -map_map, -(map_singleton (zero n)), -map_append, -upto_step] end
+  congruence, rewrite [map_map, -lift_succ.comm, -map_map, -(map_singleton _ (zero n)), -map_append, -upto_step] end
 
 section
 local attribute group_of_add_group [instance]

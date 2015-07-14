@@ -19,10 +19,6 @@ lemma singleton_subset_of_mem {A : Type} {a : A} {S : finset A} : a ∈ S → si
 assume Pain, subset_of_forall take x,
   by rewrite [mem_singleton_eq]; intro P; rewrite P; assumption
 
-lemma card_pos_of_mem {A : Type} [deceqA : decidable_eq A] {a : A} {S : finset A} :
-  a ∈ S → card S > 0 :=
-assume Pain, lt_of_succ_le (card_le_card_of_subset (singleton_subset_of_mem Pain))
-
 variables {G S : Type} [ambientG : group G] [deceqG : decidable_eq G] [finS : fintype S] [deceqS : decidable_eq S]
 include ambientG
 
@@ -390,22 +386,6 @@ end cauchy
 
 section sylow
 
-lemma pow_dvd_of_pow_succ_dvd {p i n : nat} : p^(succ i) ∣ n → p^i ∣ n :=
-assume Psuccdvd,
-assert Pdvdsucc : p^i ∣ p^(succ i), from by rewrite [pow_succ]; apply dvd_of_eq_mul; apply rfl,
-dvd.trans Pdvdsucc Psuccdvd
-
-lemma prime_pos {p : nat} : prime p → p > 0 :=
-assume Pp, succ_pred_prime Pp ▸ lt_succ_of_lt (pred_prime_pos Pp)
-
-lemma pow_pos_of_pos {p : nat} (Ppos : p > 0) : ∀ n, p^n > 0
-| 0        := by rewrite [pow_zero]; apply zero_lt_succ
-| (succ n) := by rewrite [pow_succ']; apply mul_pos Ppos; exact pow_pos_of_pos n
-
-lemma dvd_of_pow_succ_dvd_mul_pow {p i n : nat} (Ppos : p > 0) :
-  p^(succ i) ∣ (n * p^i) → p ∣ n :=
-by rewrite [pow_succ']; apply dvd_of_mul_dvd_mul_right; apply pow_pos_of_pos Ppos
-
 open finset fintype
 
 variables {G : Type} [ambientG : group G] [finG : fintype G] [deceqG : decidable_eq G]
@@ -427,13 +407,32 @@ theorem first_sylow_theorem {p : nat} (Pp : prime p) :
   assert Ppdvd : p ∣ card (lcoset_type (normalizer H) H), from
     dvd_of_mod_eq_zero
       (by rewrite [-(card_psubg_cosets_mod_eq Ppsubg), -dvd_iff_mod_eq_zero];
-      exact dvd_of_pow_succ_dvd_mul_pow (prime_pos Pp) Ppowsucc),
+      exact dvd_of_pow_succ_dvd_mul_pow (pos_of_prime Pp) Ppowsucc),
   obtain J PJ, from cauchy_theorem Pp Ppdvd,
   exists.intro (fin_coset_Union (cyc J))
     (and.intro finsubg_is_subgroup
       (by rewrite [pow_succ', -PcardH, -PJ]; apply card_Union_lcosets))
 
 check @first_sylow_theorem
+
+theorem first_sylow_theorem' {p : nat} (Pp : prime p) :
+  ∀ n, p^n ∣ card G → ∃ (H : finset G) (finsubgH : is_finsubg H), card H = p^n
+| 0        := assume Pdvd, exists.intro (singleton 1)
+  (exists.intro one_is_finsubg
+    (by rewrite [card_singleton, pow_zero]))
+| (succ n) := assume Pdvd,
+  obtain H PfinsubgH PcardH, from first_sylow_theorem' n (pow_dvd_of_pow_succ_dvd Pdvd),
+  assert Ppsubg : psubg H p n, from and.intro Pp PcardH,
+  assert Ppowsucc : p^(succ n) ∣ (card (lcoset_type univ H) * p^n),
+    by rewrite [-PcardH, -(lagrange_theorem' !subset_univ)]; exact Pdvd,
+  assert Ppdvd : p ∣ card (lcoset_type (normalizer H) H), from
+    dvd_of_mod_eq_zero
+      (by rewrite [-(card_psubg_cosets_mod_eq Ppsubg), -dvd_iff_mod_eq_zero];
+      exact dvd_of_pow_succ_dvd_mul_pow (pos_of_prime Pp) Ppowsucc),
+  obtain J PJ, from cauchy_theorem Pp Ppdvd,
+  exists.intro (fin_coset_Union (cyc J))
+    (exists.intro _
+      (by rewrite [pow_succ', -PcardH, -PJ]; apply card_Union_lcosets))
 
 end sylow
 

@@ -81,7 +81,7 @@ lemma lift_fun_eq {f : fin n → fin n} {i : fin n} :
   lift_fun f (lift_succ i) = lift_succ (f i) :=
 begin
 rewrite [lift_fun_of_ne_max lift_succ_ne_max], congruence, congruence,
-rewrite [-eq_iff_veq, val_mk, ↑lift_succ, -val_lift]
+rewrite [-eq_iff_veq, ↑lift_succ, -val_lift]
 end
 
 lemma lift_fun_of_inj {f : fin n → fin n} : injective f → injective (lift_fun f) :=
@@ -114,7 +114,7 @@ definition madd (i j : fin (succ n)) : fin (succ n) :=
 mk ((i + j) mod (succ n)) (mod_lt _ !zero_lt_succ)
 
 lemma val_madd : ∀ i j : fin (succ n), val (madd i j) = (i + j) mod (succ n)
-| (mk iv ilt) (mk jv jlt) := by rewrite [val_mk]
+| (mk iv ilt) (mk jv jlt) := rfl
 
 lemma madd_inj : ∀ {i : fin (succ n)}, injective (madd i)
 | (mk iv ilt) :=
@@ -132,7 +132,7 @@ open nat fin eq.ops algebra
 variable {n : nat}
 
 lemma val_mod : ∀ i : fin (succ n), (val i) mod (succ n) = val i
-| (mk iv ilt) := by rewrite [*val_mk, mod_eq_of_lt ilt]
+| (mk iv ilt) := by esimp; rewrite [ mod_eq_of_lt ilt]
 
 definition minv : ∀ i : fin (succ n), fin (succ n)
 | (mk iv ilt) := mk ((succ n - iv) mod succ n) (mod_lt _ !zero_lt_succ)

@@ -5,17 +5,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author : Haitao Zhang
 -/
 import data algebra.group data
-open function
--- ⁻¹ in eq.ops conflicts with group ⁻¹
--- open eq.ops
-local notation H1 ▸ H2 := eq.subst H1 H2
-open set
-local attribute set [reducible]
+open function eq.ops
 
-section
-open finset
--- overloading problem, use set.subset explicitly for now-example (A : Type) (x : A) (S H : set A) (Pin : x ∈ S) (Psub : S ⊆ H) : x ∈ H := Psub Pin
-end
+open set
 
 namespace algebra
 

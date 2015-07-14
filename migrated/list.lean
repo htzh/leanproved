@@ -26,6 +26,18 @@ lemma cons_inj {A : Type} {a : A} : injective (cons a) :=
 
 end basic
 
+section comb
+
+variables {A B C : Type}
+
+lemma map_append (f : A → B) : ∀ l₁ l₂, map f (l₁++l₂) = (map f l₁)++(map f l₂)
+| nil    := take l, rfl
+| (a::l) := take l', begin rewrite [append_cons, *map_cons, append_cons, map_append] end
+
+lemma map_singleton (f : A → B) (a : A) : map f [a] = [f a] := rfl
+
+end comb
+
 section unused
 open nat
 

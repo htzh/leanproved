@@ -344,8 +344,6 @@ end lcoset_fintype
 section normalizer
 open subtype
 
-lemma elt_of_tag {A : Type} {P : A → Prop} {a} {Ha : P a} : elt_of (tag a Ha) = a := rfl
-
 variables {G : Type} [ambientG : group G] [finG : fintype G] [deceqG : decidable_eq G]
 include ambientG deceqG finG
 
