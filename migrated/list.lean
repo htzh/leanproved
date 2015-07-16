@@ -24,6 +24,11 @@ lemma tail_eq_of_cons_eq {A : Type} {h₁ h₂ : A} {t₁ t₂ : list A} :
 lemma cons_inj {A : Type} {a : A} : injective (cons a) :=
       take l₁ l₂, assume Pe, tail_eq_of_cons_eq Pe
 
+open nat
+lemma length_pos_of_mem {A : Type} {a : A} : ∀ {l : list A}, a ∈ l → 0 < length l
+| []     := assume Pinnil, by contradiction
+| (b::l) := assume Pin, !zero_lt_succ
+
 end basic
 
 section comb
@@ -37,6 +42,14 @@ lemma map_append (f : A → B) : ∀ l₁ l₂, map f (l₁++l₂) = (map f l₁
 lemma map_singleton (f : A → B) (a : A) : map f [a] = [f a] := rfl
 
 end comb
+
+section set
+open nat
+lemma upto_step : ∀ {n : nat}, upto (succ n) = (map succ (upto n))++[0]
+| 0        := rfl
+| (succ n) := begin rewrite [upto_succ n, map_cons, append_cons, -upto_step] end
+
+end set
 
 section unused
 open nat

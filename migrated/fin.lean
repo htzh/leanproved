@@ -125,7 +125,60 @@ take j₁ j₂, fin.destruct j₁ (fin.destruct j₂ (λ jv₁ jlt₁ jv₂ jlt�
   apply mod_eq_mod_of_add_mod_eq_add_mod_left Peq
 end))
 
+variable (n)
+definition mk_mod [reducible] (n i : nat) : fin (succ n) :=
+mk (i mod (succ n)) (mod_lt _ !zero_lt_succ)
+
+variable {n}
+
+lemma mk_mod_eq {n : nat} {i : fin (succ n)} : i = mk_mod n i :=
+eq_of_veq begin rewrite [↑mk_mod, mod_eq_of_lt !is_lt] end
+
+lemma mk_mod_of_lt {n i : nat} (Plt : i < succ n) : mk_mod n i = mk i Plt :=
+begin esimp [mk_mod], congruence, exact mod_eq_of_lt Plt end
+
+lemma mk_succ_ne_zero {n i : nat} : ∀ {P}, mk (succ i) P ≠ zero n :=
+assume P Pe, absurd (veq_of_eq Pe) !succ_ne_zero
+
+lemma madd_mk_mod {n i j : nat} : madd (mk_mod n i) (mk_mod n j) = mk_mod n (i+j) :=
+eq_of_veq begin esimp [madd, mk_mod], rewrite [ mod_add_mod, add_mod_mod ] end
+
+lemma succ_max {n : nat} : fin.succ maxi = (@maxi (succ n)) := rfl
+
+lemma lift_zero {n : nat} : lift_succ (zero n) = zero (succ n) := rfl
+
+lemma lift_succ.comm {n : nat} : lift_succ ∘ (@succ n) = succ ∘ lift_succ :=
+funext take i, eq_of_veq (begin rewrite [↑lift_succ, -val_lift, *val_succ, -val_lift] end)
+
+lemma max_lt (i j : fin n) : max i j < n :=
+max_lt (is_lt i) (is_lt j)
+
 end
+
+section upto
+open list
+
+lemma dmap_map_lift {n : nat} : ∀ l : list nat, (∀ i, i ∈ l → i < n) → dmap (λ i, i < succ n) mk l = map lift_succ (dmap (λ i, i < n) mk l)
+| []     := assume Plt, rfl
+| (i::l) := assume Plt, begin
+  rewrite [@dmap_cons_of_pos _ _ (λ i, i < succ n) _ _ _ (lt_succ_of_lt (Plt i !mem_cons)), @dmap_cons_of_pos _ _ (λ i, i < n) _ _ _ (Plt i !mem_cons), map_cons],
+  congruence,
+  apply dmap_map_lift,
+  intro j Pjinl, apply Plt, apply mem_cons_of_mem, assumption end
+
+lemma upto_succ (n : nat) : upto (succ n) = maxi :: map lift_succ (upto n) :=
+begin
+  rewrite [↑fin.upto, list.upto_succ, @dmap_cons_of_pos _ _ (λ i, i < succ n) _ _ _ (nat.self_lt_succ n)],
+  congruence,
+  apply dmap_map_lift, apply @list.lt_of_mem_upto
+end
+
+definition upto_step : ∀ {n : nat}, fin.upto (succ n) = (map succ (upto n))++[zero n]
+| 0        := rfl
+| (succ n) := begin rewrite [upto_succ n, map_cons, append_cons, succ_max, upto_succ, -lift_zero],
+  congruence, rewrite [map_map, -lift_succ.comm, -map_map, -(map_singleton _ (zero n)), -map_append, -upto_step] end
+
+end upto
 
 section zn
 open nat fin eq.ops algebra

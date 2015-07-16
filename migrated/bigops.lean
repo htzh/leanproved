@@ -5,11 +5,12 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author : Haitao Zhang
 -/
 
-import algebra.group algebra.group_bigops algebra.group_power data.list.basic data.list.perm data.finset.basic
-open algebra function binary quot subtype list finset
+import algebra.group_bigops algebra.group_power
+open nat algebra function binary quot subtype list finset
 
-namespace algebra
+namespace migration
 section group
+
 lemma Prodl_singleton {A B : Type} [mB : monoid B] {a : A} {f : A → B} : Prodl [a] f = f a :=
 !one_mul
 
@@ -28,4 +29,4 @@ lemma Prodl_eq_pow_of_const {A B : Type} [mB : monoid B] {f : A → B} :
   by rewrite [Prodl_cons f, Pconst a !mem_cons, Prodl_eq_pow_of_const b Pconstl, length_cons, add_one, pow_succ' b]
 
 end group
-end algebra
+end migration
