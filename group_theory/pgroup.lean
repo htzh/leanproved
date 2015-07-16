@@ -5,7 +5,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author : Haitao Zhang
 -/
 
-import theories.number_theory.primes data algebra.group algebra.group_power algebra.group_bigops .cyclic  .finsubg .hom .finfun .perm .action
+import theories.number_theory.primes data algebra.group algebra.group_power algebra.group_bigops .cyclic  .finsubg .hom .perm .action
 
 open nat fin list algebra function subtype
 
@@ -14,10 +14,6 @@ namespace group
 section pgroup
 
 open finset fintype
-
-lemma singleton_subset_of_mem {A : Type} {a : A} {S : finset A} : a ∈ S → singleton a ⊆ S :=
-assume Pain, subset_of_forall take x,
-  by rewrite [mem_singleton_eq]; intro P; rewrite P; assumption
 
 variables {G S : Type} [ambientG : group G] [deceqG : decidable_eq G] [finS : fintype S] [deceqS : decidable_eq S]
 include ambientG
@@ -75,22 +71,6 @@ end psubg_cosets
 
 section cauchy
 
-lemma Prodl_singleton {A B : Type} [mB : monoid B] {a : A} {f : A → B} : Prodl [a] f = f a :=
-!one_mul
-
-lemma Prodl_map {A B : Type} [mB : monoid B] {f : A → B} :
-  ∀ {l : list A}, Prodl l f = Prodl (map f l) id
-| nil    := by rewrite [map_nil]
-| (a::l) := begin rewrite [map_cons, Prodl_cons f, Prodl_cons id (f a), Prodl_map] end
-
-lemma Prodl_eq_pow_of_const {A B : Type} [mB : monoid B] {f : A → B} :
-  ∀ {l : list A} b, (∀ a, a ∈ l → f a = b) → Prodl l f = b ^ length l
-| nil    := take b, assume Pconst, by rewrite [length_nil, {b^0}algebra.pow_zero]
-| (a::l) := take b, assume Pconst,
-  assert Pconstl : ∀ a', a' ∈ l → f a' = b,
-    from take a' Pa'in, Pconst a' (mem_cons_of_mem a Pa'in),
-  by rewrite [Prodl_cons f, Pconst a !mem_cons, Prodl_eq_pow_of_const b Pconstl, length_cons, add_one, pow_succ' b]
-
 lemma prodl_rotl_eq_one_of_prodl_eq_one {A B : Type} [gB : group B] {f : A → B} :
   ∀ {l : list A}, Prodl l f = 1 → Prodl (list.rotl l) f = 1
 | nil := assume Peq, rfl
@@ -103,9 +83,6 @@ section rotl_peo
 
 variables {A : Type} [ambA : group A]
 include ambA
-
-theorem eq_inv_of_mul_eq_one {a b : A} (H : a * b = 1) : a = b⁻¹ :=
-begin rewrite [eq_inv_iff_eq_inv], apply eq.symm, exact inv_eq_of_mul_eq_one H end
 
 variable [finA : fintype A]
 include finA
@@ -409,8 +386,6 @@ theorem first_sylow_theorem {p : nat} (Pp : prime p) :
   exists.intro (fin_coset_Union (cyc J))
     (exists.intro _
       (by rewrite [pow_succ', -PcardH, -PJ]; apply card_Union_lcosets))
-
-check @first_sylow_theorem
 
 end sylow
 

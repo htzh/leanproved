@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 
 Author : Haitao Zhang
 -/
-import algebra.group data .finfun
+import algebra.group data data.fintype.function
 
 open nat list algebra function
 

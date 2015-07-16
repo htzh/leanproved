@@ -68,7 +68,7 @@ assume Pcard, eq.symm (eq_of_card_eq_of_subset (by rewrite [Pcard])
 
 end subg
 
-section lagrange
+section fin_lcoset
 
 open set
 
@@ -177,17 +177,23 @@ theorem lagrange_theorem (Psub : H ⊆ G) : card G = card (fin_lcosets H G) * ca
         ... = nat.Sum (fin_lcosets H G) (λ x, card H) : nat.Sum_ext (take g P, fin_lcosets_card_eq g P)
         ... = card (fin_lcosets H G) * card H : Sum_const_eq_card_mul
 
-end lagrange
-
-section lcoset_fintype
-open fintype list subtype
+end fin_lcoset
 
 section
+open fintype list subtype
 
 lemma dinj_tag {A : Type} (P : A → Prop) : dinj P tag :=
 take a₁ a₂ Pa₁ Pa₂ Pteq, subtype.no_confusion Pteq (λ Pe Pqe, Pe)
 
+open nat
+
+lemma card_pos {A : Type} [ambientA : group A] [finA : fintype A] : 0 < card A :=
+  length_pos_of_mem (mem_univ 1)
+
 end
+
+section lcoset_fintype
+open fintype list subtype
 
 variables {A : Type} [ambientA : group A] [finA : fintype A] [deceqA : decidable_eq A]
 include ambientA deceqA finA
@@ -491,10 +497,6 @@ variable (H)
 
 definition fin_coset_group [instance] : group (lcoset_type (normalizer H) H) :=
 group.mk fin_coset_mul fin_coset_mul_assoc fin_coset_one fin_coset_one_mul fin_coset_mul_one fin_coset_inv fin_coset_left_inv
-
-private definition coset_of_mem {g : G} (Pgin : g ∈ normalizer H) :
-  lcoset_type (normalizer H) H :=
-tag (fin_lcoset H g) (exists.intro g (and.intro Pgin rfl))
 
 variables {H} (Hc : finset (lcoset_type (normalizer H) H))
 
